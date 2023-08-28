@@ -1,7 +1,7 @@
 from .transform_3d import (
     PadMultiViewImage, NormalizeMultiviewImage, 
     PhotoMetricDistortionMultiViewImage, CustomCollect3D, RandomScaleImageMultiViewImage)
-from .formating import CustomDefaultFormatBundle3D
+from .formating import CustomDefaultFormatBundle3D, OWCollect3D
 from .augmentation import (CropResizeFlipImage, GlobalRotScaleTransImage)
 from .dd3d_mapper import DD3DMapper
 __all__ = [
@@ -10,4 +10,5 @@ __all__ = [
     'RandomScaleImageMultiViewImage',
     'CropResizeFlipImage', 'GlobalRotScaleTransImage',
     'DD3DMapper',
+    'OWCollect3D'
 ]

@@ -3,6 +3,9 @@
 # ---------------------------------------------
 #  Modified by Zhiqi Li
 # ---------------------------------------------
+import sys
+sys.path.append('./tools/')
+
 import mmcv
 import numpy as np
 import os

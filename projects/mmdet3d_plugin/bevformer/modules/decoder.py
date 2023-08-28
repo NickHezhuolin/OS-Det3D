@@ -122,10 +122,10 @@ class DetectionTransformerDecoder(TransformerLayerSequence):
                 intermediate.append(output)
                 intermediate_reference_points.append(reference_points)
 
-        if self.return_intermediate:
+        if self.return_intermediate: # True
             return torch.stack(intermediate), torch.stack(
                 intermediate_reference_points)
-
+        
         return output, reference_points
 
 

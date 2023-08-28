@@ -16,6 +16,7 @@ import numpy as np
 import mmdet3d
 from projects.mmdet3d_plugin.models.utils.bricks import run_time
 
+import pdb
 
 @DETECTORS.register_module()
 class BEVFormer(MVXTwoStageDetector):
@@ -104,7 +105,46 @@ class BEVFormer(MVXTwoStageDetector):
         """Extract features from images and points."""
 
         img_feats = self.extract_img_feat(img, img_metas, len_queue=len_queue)
-        
+
+        #############################################
+        # FPN_neck_img_feat_list len(img_feat) = 4
+        # img_feats info : (B,len_queue,N,C,H,W)
+        # img_feats[0].shape = torch.Size([1,3,6,256,116,200])]
+        # img_feats[1].shape = torch.Size([1,3,6,256,58,100])]
+        # img_feats[2].shape = torch.Size([1,3,6,256,29,50])]
+        # img_feats[3].shape = torch.Size([1,3,6,256,15,25])]
+        ##############################################
+        # import seaborn as sns
+        # import matplotlib.pyplot as plt
+        # import sys
+        # import os
+
+        # visual_dir = 'visualization/nuscenes/20230808/bevformer_base_val/fpn_feat'
+        # if not os.path.isdir(visual_dir):
+        #     os.makedirs(visual_dir)
+        # # 选择第一层特征图
+        # img_feat = img_feats[0]
+        # B, len_queue_val, num_cams, C, H, W = img_feat.shape
+            
+        # # 遍历 len_queue
+        # for n_len_queue in range(len_queue_val):
+        #     # 遍历每个 camera
+        #     for n_cam in range(num_cams):
+        #         # 根据 C : Channel 取平均特征图， HxW
+        #         avg_feature_map = img_feat[0, n_len_queue, n_cam].mean(0)
+                
+        #         plt.figure()
+        #         fig_title = f'FPN_0_cam_{n_cam}_queue_{n_len_queue}'
+        #         fig_path = os.path.join(visual_dir, fig_title + '.png')
+        #         fig = sns.heatmap(avg_feature_map.detach().cpu().numpy())
+        #         plt.title(fig_title)
+        #         hm = fig.get_figure()
+
+        #         hm.savefig(fig_path, dpi=36*36)
+        #         plt.close()  # 关闭图像，避免打开过多的窗口
+        #         print(f"{fig_path} Save successfully!")
+        ##############################################
+
         return img_feats
 
 

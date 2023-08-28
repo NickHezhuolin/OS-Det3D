@@ -211,6 +211,31 @@ class BEVFormerEncoder(TransformerLayerSequence):
             hybird_ref_2d = torch.stack([ref_2d, ref_2d], 1).reshape(
                 bs*2, len_bev, num_bev_level, 2)
 
+        #############################################
+        # import seaborn as sns
+        # import matplotlib.pyplot as plt
+        # import sys
+        # import os
+        
+        # visual_dir = f'visualization/nuscenes/20230809/bevformer_base_train/bev_query_init/'
+        # if not os.path.isdir(visual_dir):
+        #     os.makedirs(visual_dir)
+            
+        # #生成 bev_query 可视化
+        # dense_heatmap_bev_queries_image = torch.mean(bev_query.detach().permute(0, 2, 1).view(1, 256, 200, 200), dim=1)
+        # dense_image_bev_queries = dense_heatmap_bev_queries_image.cpu().clone()  # clone the tensor
+        # dense_image_bev_queries = dense_image_bev_queries.squeeze(0)  # remove the fake batch dimension
+        
+        # plt.figure()
+        # fig_path = visual_dir + 'C_BEV_bbox_init.png'
+        # fig = sns.heatmap(dense_image_bev_queries.detach().numpy())
+        # plt.title('C_BEV_bbox_init')
+        # hm = fig.get_figure()
+        # hm.savefig(fig_path, dpi=36*36)
+        # plt.close()
+        # print(f"{fig_path} Save successfully!")
+        #############################################
+        
         for lid, layer in enumerate(self.layers):
             output = layer(
                 bev_query,
@@ -229,13 +254,39 @@ class BEVFormerEncoder(TransformerLayerSequence):
                 prev_bev=prev_bev,
                 **kwargs)
 
+            ##########################################
+            # import seaborn as sns
+            # import matplotlib.pyplot as plt
+            # import sys
+            # import os
+            
+            # visual_dir = f'visualization/nuscenes/20230809/bevformer_base_val/bev_encoder_ft/'
+            # if not os.path.isdir(visual_dir):
+            #     os.makedirs(visual_dir)
+                
+            # #生成 bev_feat 可视化
+            # dense_heatmap_bev_queries_image = torch.mean(output.detach().permute(0, 2, 1).view(1, 256, 200, 200), dim=1)
+            # dense_image_bev_queries = dense_heatmap_bev_queries_image.cpu().clone()  # clone the tensor
+            # dense_image_bev_queries = dense_image_bev_queries.squeeze(0)  # remove the fake batch dimension
+            
+            # plt.figure()
+            # fig_path = visual_dir + 'C_BEV_output_' + str(lid+1) + '.png'
+            # fig = sns.heatmap(dense_image_bev_queries.detach().numpy())
+            # plt.gca().invert_yaxis()
+            # plt.title('C_BEV_output_'+ str(lid+1))
+            # hm = fig.get_figure()
+            # hm.savefig(fig_path, dpi=36*36)
+            # plt.close()
+            # print(f"{fig_path} Save successfully!")
+            ##########################################
+            
             bev_query = output
             if self.return_intermediate:
                 intermediate.append(output)
-
+    
         if self.return_intermediate:
             return torch.stack(intermediate)
-
+        
         return output
 
 

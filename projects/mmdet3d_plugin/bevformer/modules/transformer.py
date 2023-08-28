@@ -258,6 +258,32 @@ class PerceptionTransformer(BaseModule):
             bev_pos=bev_pos,
             prev_bev=prev_bev,
             **kwargs)  # bev_embed shape: bs, bev_h*bev_w, embed_dims
+        
+        ###########################################
+        # import seaborn as sns
+        # import matplotlib.pyplot as plt
+        # import sys
+        # import os
+        
+        # visual_dir = f'visualization/nuscenes/bevformer_base_val/bev_embed_ft/'
+        # if not os.path.isdir(visual_dir):
+        #     os.makedirs(visual_dir)
+            
+        # #生成 bev_feat 可视化
+        # dense_heatmap_bev_queries_image = torch.mean(bev_embed.detach().permute(0, 2, 1).view(1, 256, 200, 200), dim=1)
+        # dense_image_bev_queries = dense_heatmap_bev_queries_image.cpu().clone()  # clone the tensor
+        # dense_image_bev_queries = dense_image_bev_queries.squeeze(0)  # remove the fake batch dimension
+        
+        # plt.figure()
+        # fig_path = visual_dir + 'C_BEV_encoder_output.png'
+        # fig = sns.heatmap(dense_image_bev_queries.detach().numpy())
+        # plt.gca().invert_yaxis()
+        # plt.title('C_BEV_encoder_output')
+        # hm = fig.get_figure()
+        # hm.savefig(fig_path, dpi=36*36)
+        # plt.close()
+        # print(f"{fig_path} Save successfully!")
+        ###########################################
 
         bs = mlvl_feats[0].size(0)
         query_pos, query = torch.split(
