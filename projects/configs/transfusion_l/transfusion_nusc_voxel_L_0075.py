@@ -218,7 +218,7 @@ model = dict(
         pts=dict(
             dataset='nuScenes',
             assigner=dict(
-                type='HungarianAssigner3D',
+                type='TFHungarianAssigner3D',
                 iou_calculator=dict(type='BboxOverlaps3D', coordinate='lidar'),
                 cls_cost=dict(type='FocalLossCost', gamma=2, alpha=0.25, weight=0.15),
                 reg_cost=dict(type='BBoxBEVL1Cost', weight=0.25),
