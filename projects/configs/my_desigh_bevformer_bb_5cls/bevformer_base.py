@@ -37,8 +37,8 @@ _dim_ = 256
 _pos_dim_ = _dim_//2
 _ffn_dim_ = _dim_*2
 _num_levels_ = 4
-bev_h_ = 50
-bev_w_ = 50
+bev_h_ = 200
+bev_w_ = 200
 queue_length = 4 # each sequence contains `queue_length` frames.
 
 model = dict(
@@ -259,5 +259,5 @@ log_config = dict(
     ])
 
 checkpoint_config = dict(interval=1)
-load_from = 'ckpts/r101_dcn_fcos3d_pretrain.pth'
+load_from = '/home/pujian/HZL/1_OW3D_RPN/OWBEVFormer/ckpts/r101_dcn_fcos3d_pretrain.pth'
 work_dir = 'work_dirs/bevformer_base_5cls'
