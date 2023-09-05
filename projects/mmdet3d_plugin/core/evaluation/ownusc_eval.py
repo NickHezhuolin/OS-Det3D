@@ -10,8 +10,7 @@ import numpy as np
 from nuscenes import NuScenes
 from nuscenes.eval.common.config import config_factory
 from nuscenes.eval.common.data_classes import EvalBoxes
-from nuscenes.eval.common.loaders import load_prediction, load_gt, add_center_dist, filter_eval_boxes
-from nuscenes.eval.detection.algo import calc_ap, calc_tp
+from nuscenes.eval.common.loaders import load_prediction, add_center_dist, filter_eval_boxes
 from nuscenes.eval.detection.constants import TP_METRICS
 from nuscenes.eval.detection.data_classes import DetectionConfig, DetectionMetrics, DetectionBox, \
     DetectionMetricDataList
@@ -19,11 +18,7 @@ from nuscenes.eval.detection.render import summary_plot, class_pr_curve, class_t
 
 # load_gt_pkgs
 import tqdm
-from pyquaternion import Quaternion
-from nuscenes.eval.detection.utils import category_to_detection_name
 from nuscenes.eval.tracking.data_classes import TrackingBox
-from nuscenes.utils.data_classes import Box
-from nuscenes.utils.geometry_utils import points_in_box
 from nuscenes.utils.splits import create_splits_scenes
 
 from typing import Callable
@@ -31,6 +26,42 @@ from nuscenes.eval.common.data_classes import EvalBoxes
 from nuscenes.eval.detection.data_classes import DetectionMetricData
 from nuscenes.eval.common.utils import center_distance, scale_iou, yaw_diff, velocity_l2, attr_acc, cummean
 
+def calc_tp(md: DetectionMetricData, min_recall: float, metric_name: str) -> float:
+    """ Calculates true positive errors. """
+
+    first_ind = round(100 * min_recall) + 1  # +1 to exclude the error at min recall.
+    last_ind = md.max_recall_ind  # First instance of confidence = 0 is index of max achieved recall.
+    
+    if last_ind < first_ind:
+        return 1.0  # Assign 1 here. If this happens for all classes, the score for that TP metric will be 0.
+    else:
+        tp = float(np.mean(getattr(md, metric_name)[first_ind: last_ind + 1])) 
+        return tp # +1 to include error at max recall.
+
+def calc_ap(md: DetectionMetricData, min_recall: float, min_precision: float) -> float:
+    """ Calculated average precision. """
+
+    assert 0 <= min_precision < 1
+    assert 0 <= min_recall <= 1
+
+    prec = np.copy(md.precision)
+    prec = prec[round(100 * min_recall) + 1:]  # Clip low recalls. +1 to exclude the min recall bin.
+    prec -= min_precision  # Clip low precision
+    prec[prec < 0] = 0
+    
+    ap = float(np.mean(prec)) / (1.0 - min_precision)
+    return ap
+
+def calc_unk_ap(md: DetectionMetricData, min_recall: float, min_precision: float) -> float:
+    """ Calculated average precision. """
+
+    assert 0 <= min_precision < 1
+    assert 0 <= min_recall <= 1
+
+    prec = np.copy(md.precision)
+    
+    ap = float(np.mean(prec)) / (1.0 - min_precision)
+    return ap
 
 def accumulate(gt_boxes: EvalBoxes,
                pred_boxes: EvalBoxes,
@@ -464,15 +495,21 @@ class CustomDetectionEval:
         metrics = DetectionMetrics(self.cfg)
         for class_name in self.cfg.class_names:
             # Compute APs.
-            for dist_th in self.cfg.dist_ths:
-                metric_data = metric_data_list[(class_name, dist_th)]
-                ap = calc_ap(metric_data, self.cfg.min_recall, self.cfg.min_precision)
-                metrics.add_label_ap(class_name, dist_th, ap)
+            if class_name == 'unk_obj':
+                for dist_th in self.cfg.dist_ths:
+                    metric_data = metric_data_list[(class_name, dist_th)]
+                    ap = calc_unk_ap(metric_data, self.cfg.min_recall, self.cfg.min_precision)
+                    metrics.add_label_ap(class_name, dist_th, ap)
+            else:
+                for dist_th in self.cfg.dist_ths:
+                    metric_data = metric_data_list[(class_name, dist_th)]
+                    ap = calc_ap(metric_data, self.cfg.min_recall, self.cfg.min_precision)
+                    metrics.add_label_ap(class_name, dist_th, ap)
 
             # Compute TP metrics.
             for metric_name in TP_METRICS:
                 metric_data = metric_data_list[(class_name, self.cfg.dist_th_tp)]
-                if class_name in ['traffic_cone'] and metric_name in ['attr_err', 'vel_err', 'orient_err']:
+                if class_name in ['traffic_cone','unk_obj'] and metric_name in ['attr_err', 'vel_err', 'orient_err']:
                     tp = np.nan
                 elif class_name in ['barrier'] and metric_name in ['attr_err', 'vel_err']:
                     tp = np.nan
