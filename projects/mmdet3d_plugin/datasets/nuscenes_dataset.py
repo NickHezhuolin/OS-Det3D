@@ -493,10 +493,7 @@ class CustomNuScenesDataset5cls(NuScenesDataset):
         """
         nusc_annos = {}
 
-        if self.test_mode:
-            mapped_class_names = self.EVAL_CLASSES
-        else:
-            mapped_class_names = self.TRAIN_CLASSES
+        mapped_class_names = self.CLASSES
 
         print('Start to convert detection format...')
         for sample_id, det in enumerate(mmcv.track_iter_progress(results)):
@@ -626,7 +623,7 @@ def lidar_nusc_box_to_global(info,
         box.translate(np.array(info['lidar2ego_translation']))
         # filter det in ego.
         cls_range_map = eval_configs.class_range
-        cls_range_map['unk_obj'] = 30
+        # cls_range_map['unk_obj'] = 30
         radius = np.linalg.norm(box.center[:2], 2)
         det_range = cls_range_map[classes[box.label]]
         if radius > det_range:
