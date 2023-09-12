@@ -21,16 +21,21 @@ point_cloud_range = [-51.2, -51.2, -5.0, 51.2, 51.2, 3.0]
 voxel_size = [0.2, 0.2, 8]
 
 
-NUM_CLASSES = 10
+TRAIN_NUM_CLASSES = 5
 
 
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 
 # For nuScenes we usually do 10-class detection
-class_names = [
-    'car', 'truck', 'construction_vehicle', 'bus', 'trailer', 'barrier',
-    'motorcycle', 'bicycle', 'pedestrian', 'traffic_cone'
+train_class_names = [
+    'car', 'construction_vehicle', 'barrier',
+     'bicycle', 'pedestrian'
+]
+
+eval_class_names = [
+    'car', 'construction_vehicle', 'barrier',
+     'bicycle', 'pedestrian'
 ]
 
 input_modality = dict(
@@ -75,7 +80,7 @@ model = dict(
         bev_h=bev_h_,
         bev_w=bev_w_,
         num_query=900,
-        num_classes=NUM_CLASSES+1,
+        num_classes=TRAIN_NUM_CLASSES+1,
         topk=6,
         owod=True,
         owod_decoder_layer=6,
@@ -145,7 +150,7 @@ model = dict(
             pc_range=point_cloud_range,
             max_num=300,
             voxel_size=voxel_size,
-            num_classes=NUM_CLASSES+1),
+            num_classes=TRAIN_NUM_CLASSES+1),
         positional_encoding=dict(
             type='LearnedPositionalEncoding',
             num_feats=_pos_dim_,
@@ -179,7 +184,7 @@ model = dict(
             iou_cost=dict(type='IoUCost', weight=0.0), # Fake cost. This is just to make it compatible with DETR head.
             pc_range=point_cloud_range))))
 
-dataset_type = 'OWCustomNuScenesDataset'
+dataset_type = 'OWCustomNuScenesDataset5CLS'
 data_root = 'data/nuscenes/'
 file_client_args = dict(backend='disk')
 
@@ -189,11 +194,11 @@ train_pipeline = [
     dict(type='PhotoMetricDistortionMultiViewImage'),
     dict(type='LoadAnnotations3D', with_bbox_3d=True, with_label_3d=True, with_attr_label=False),
     dict(type='ObjectRangeFilter', point_cloud_range=point_cloud_range),
-    dict(type='ObjectNameFilter', classes=class_names),
+    dict(type='ObjectNameFilter', classes=train_class_names),
     dict(type='NormalizeMultiviewImage', **img_norm_cfg),
     dict(type='RandomScaleImageMultiViewImage', scales=[0.5]),
     dict(type='PadMultiViewImage', size_divisor=32),
-    dict(type='DefaultFormatBundle3D', class_names=class_names),
+    dict(type='DefaultFormatBundle3D', class_names=train_class_names),
     dict(type='CustomCollect3D', keys=['gt_bboxes_3d', 'gt_labels_3d', 'img'])
 ]
 
@@ -211,7 +216,7 @@ test_pipeline = [
             dict(type='PadMultiViewImage', size_divisor=32),
             dict(
                 type='DefaultFormatBundle3D',
-                class_names=class_names,
+                class_names=eval_class_names,
                 with_label=False),
             dict(type='CustomCollect3D', keys=['img'])
         ])
@@ -225,7 +230,7 @@ data = dict(
         data_root=data_root,
         ann_file=data_root + 'nuscenes_infos_temporal_train.pkl',
         pipeline=train_pipeline,
-        classes=class_names,
+        classes=train_class_names,
         modality=input_modality,
         test_mode=False,
         use_valid_flag=True,
@@ -238,12 +243,12 @@ data = dict(
              data_root=data_root,
              ann_file=data_root + 'nuscenes_infos_temporal_val.pkl',
              pipeline=test_pipeline,  bev_size=(bev_h_, bev_w_),
-             classes=class_names, modality=input_modality, samples_per_gpu=1),
+             classes=eval_class_names, modality=input_modality, samples_per_gpu=1),
     test=dict(type=dataset_type,
               data_root=data_root,
               ann_file=data_root + 'nuscenes_infos_temporal_val.pkl',
               pipeline=test_pipeline, bev_size=(bev_h_, bev_w_),
-              classes=class_names, modality=input_modality),
+              classes=eval_class_names, modality=input_modality),
     shuffler_sampler=dict(type='DistributedGroupSampler'),
     nonshuffler_sampler=dict(type='DistributedSampler')
 )
@@ -266,7 +271,7 @@ lr_config = dict(
     warmup_ratio=1.0 / 3,
     min_lr_ratio=1e-3)
 total_epochs = 24
-evaluation = dict(interval=3, pipeline=test_pipeline)
+evaluation = dict(interval=6, pipeline=test_pipeline)
 
 runner = dict(type='EpochBasedRunner', max_epochs=total_epochs)
 
@@ -279,4 +284,4 @@ log_config = dict(
 
 checkpoint_config = dict(interval=1)
 load_from = 'work_dirs/bevformer_tiny_5cls/epoch_18.pth'
-work_dir = 'work_dirs/owbevformer_tiny_5cls_0911_bevformer_tiny_epoch18'
+work_dir = 'work_dirs/owbevformer_tiny_5cls_0912_bevformer_tiny_epoch18'
