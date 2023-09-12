@@ -76,7 +76,7 @@ model = dict(
         bev_w=bev_w_,
         num_query=900,
         num_classes=NUM_CLASSES+1,
-        topk=3,
+        topk=6,
         owod=True,
         owod_decoder_layer=6,
         in_channels=_dim_,
@@ -179,7 +179,7 @@ model = dict(
             iou_cost=dict(type='IoUCost', weight=0.0), # Fake cost. This is just to make it compatible with DETR head.
             pc_range=point_cloud_range))))
 
-dataset_type = 'CustomNuScenesDataset'
+dataset_type = 'OWCustomNuScenesDataset5CLS'
 data_root = 'data/nuscenes/'
 file_client_args = dict(backend='disk')
 
@@ -266,7 +266,7 @@ lr_config = dict(
     warmup_ratio=1.0 / 3,
     min_lr_ratio=1e-3)
 total_epochs = 24
-evaluation = dict(interval=1, pipeline=test_pipeline)
+evaluation = dict(interval=3, pipeline=test_pipeline)
 
 runner = dict(type='EpochBasedRunner', max_epochs=total_epochs)
 
@@ -278,3 +278,5 @@ log_config = dict(
     ])
 
 checkpoint_config = dict(interval=1)
+load_from = 'work_dirs/bevformer_tiny_5cls/epoch_18.pth'
+work_dir = 'work_dirs/owbevformer_tiny_5cls_0911_bevformer_tiny_epoch18'

@@ -1,3 +1,8 @@
+import torch
+import copy
+from mmcv.parallel import DataContainer as DC
+from nuscenes.eval.common.utils import quaternion_yaw, Quaternion
+
 import mmcv
 import cv2
 import tempfile
@@ -83,14 +88,45 @@ class OWCustomNuScenesDataset5CLS(NuScenesDataset):
                 return None
             queue.append(example)
         return self.union2one(queue)
+    
+    def union2one(self, queue):
+        imgs_list = [each['img'].data for each in queue]
+        metas_map = {}
+        prev_scene_token = None
+        prev_pos = None
+        prev_angle = None
+        for i, each in enumerate(queue):
+            metas_map[i] = each['img_metas'].data
+            if metas_map[i]['scene_token'] != prev_scene_token:
+                metas_map[i]['prev_bev_exists'] = False
+                prev_scene_token = metas_map[i]['scene_token']
+                prev_pos = copy.deepcopy(metas_map[i]['can_bus'][:3])
+                prev_angle = copy.deepcopy(metas_map[i]['can_bus'][-1])
+                metas_map[i]['can_bus'][:3] = 0
+                metas_map[i]['can_bus'][-1] = 0
+            else:
+                metas_map[i]['prev_bev_exists'] = True
+                tmp_pos = copy.deepcopy(metas_map[i]['can_bus'][:3])
+                tmp_angle = copy.deepcopy(metas_map[i]['can_bus'][-1])
+                metas_map[i]['can_bus'][:3] -= prev_pos
+                metas_map[i]['can_bus'][-1] -= prev_angle
+                prev_pos = copy.deepcopy(tmp_pos)
+                prev_angle = copy.deepcopy(tmp_angle)
+        queue[-1]['img'] = DC(torch.stack(imgs_list), cpu_only=False, stack=True)
+        queue[-1]['img_metas'] = DC(metas_map, cpu_only=True)
+        queue = queue[-1]
+        return queue
 
     def get_data_info(self, index):
         """Get data info according to the given index.
+
         Args:
             index (int): Index of the sample data to get.
+
         Returns:
             dict: Data information that will be passed to the data \
                 preprocessing pipelines. It includes the following keys:
+
                 - sample_idx (str): Sample index.
                 - pts_filename (str): Filename of point clouds.
                 - sweeps (list[dict]): Infos of sweeps.
@@ -106,11 +142,14 @@ class OWCustomNuScenesDataset5CLS(NuScenesDataset):
             sample_idx=info['token'],
             pts_filename=info['lidar_path'],
             sweeps=info['sweeps'],
+            ego2global_translation=info['ego2global_translation'],
+            ego2global_rotation=info['ego2global_rotation'],
+            prev_idx=info['prev'],
+            next_idx=info['next'],
+            scene_token=info['scene_token'],
+            can_bus=info['can_bus'],
+            frame_idx=info['frame_idx'],
             timestamp=info['timestamp'] / 1e6,
-            lidar2ego_translation = info['lidar2ego_translation'],
-            lidar2ego_rotation = info['lidar2ego_rotation'],
-            lidar_ego2global_translation = info['ego2global_translation'],
-            lidar_ego2global_rotation = info['ego2global_rotation'],
         )
 
         if self.modality['use_camera']:
@@ -118,13 +157,8 @@ class OWCustomNuScenesDataset5CLS(NuScenesDataset):
             lidar2img_rts = []
             lidar2cam_rts = []
             cam_intrinsics = []
-            sensor2ego_translation = []
-            sensor2ego_rotation = []
-            cam_ego2global_translation = []
-            cam_ego2global_rotation = []
             for cam_type, cam_info in info['cams'].items():
                 image_paths.append(cam_info['data_path'])
-
                 # obtain lidar to image transformation matrix
                 lidar2cam_r = np.linalg.inv(cam_info['sensor2lidar_rotation'])
                 lidar2cam_t = cam_info[
@@ -137,14 +171,9 @@ class OWCustomNuScenesDataset5CLS(NuScenesDataset):
                 viewpad[:intrinsic.shape[0], :intrinsic.shape[1]] = intrinsic
                 lidar2img_rt = (viewpad @ lidar2cam_rt.T)
                 lidar2img_rts.append(lidar2img_rt)
+
                 cam_intrinsics.append(viewpad)
                 lidar2cam_rts.append(lidar2cam_rt.T)
-                
-                # obtain cam ego_pose info
-                sensor2ego_translation.append(cam_info['sensor2ego_translation'])
-                sensor2ego_rotation.append(cam_info['sensor2ego_rotation'])
-                cam_ego2global_translation.append(cam_info['ego2global_translation'])
-                cam_ego2global_rotation.append(cam_info['ego2global_rotation'])
 
             input_dict.update(
                 dict(
@@ -152,15 +181,22 @@ class OWCustomNuScenesDataset5CLS(NuScenesDataset):
                     lidar2img=lidar2img_rts,
                     cam_intrinsic=cam_intrinsics,
                     lidar2cam=lidar2cam_rts,
-                    sensor2ego_translation=sensor2ego_translation,
-                    sensor2ego_rotation=sensor2ego_rotation,
-                    cam_ego2global_translation=cam_ego2global_translation,
-                    cam_ego2global_rotation=cam_ego2global_rotation
                 ))
 
         if not self.test_mode:
             annos = self.get_ann_info(index)
             input_dict['ann_info'] = annos
+
+        rotation = Quaternion(input_dict['ego2global_rotation'])
+        translation = input_dict['ego2global_translation']
+        can_bus = input_dict['can_bus']
+        can_bus[:3] = translation
+        can_bus[3:7] = rotation
+        patch_angle = quaternion_yaw(rotation) / np.pi * 180
+        if patch_angle < 0:
+            patch_angle += 360
+        can_bus[-2] = patch_angle / 180 * np.pi
+        can_bus[-1] = patch_angle
 
         return input_dict
     
