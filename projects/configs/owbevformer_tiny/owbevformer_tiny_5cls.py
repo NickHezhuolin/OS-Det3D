@@ -51,7 +51,7 @@ _ffn_dim_ = _dim_*2
 _num_levels_ = 1
 bev_h_ = 50
 bev_w_ = 50
-queue_length = 3 # each sequence contains `queue_length` frames.
+queue_length = 2 # each sequence contains `queue_length` frames.
 
 model = dict(
     type='BEVFormer',
@@ -81,7 +81,7 @@ model = dict(
         bev_w=bev_w_,
         num_query=900,
         num_classes=TRAIN_NUM_CLASSES+1,
-        topk=6,
+        topk=10,
         owod=True,
         owod_decoder_layer=6,
         in_channels=_dim_,
@@ -96,7 +96,7 @@ model = dict(
             embed_dims=_dim_,
             encoder=dict(
                 type='BEVFormerEncoder',
-                num_layers=3,
+                num_layers=1,
                 pc_range=point_cloud_range,
                 num_points_in_pillar=4,
                 return_intermediate=False,
@@ -270,7 +270,7 @@ lr_config = dict(
     warmup_iters=500,
     warmup_ratio=1.0 / 3,
     min_lr_ratio=1e-3)
-total_epochs = 24
+total_epochs = 6
 evaluation = dict(interval=6, pipeline=test_pipeline)
 
 runner = dict(type='EpochBasedRunner', max_epochs=total_epochs)
@@ -283,5 +283,5 @@ log_config = dict(
     ])
 
 checkpoint_config = dict(interval=1)
-load_from = 'work_dirs/bevformer_tiny_5cls/epoch_18.pth'
+load_from = 'ckpts/bevformer_tiny_epoch_12_5_cls.pth'
 work_dir = 'work_dirs/owbevformer_tiny_5cls_0912_bevformer_tiny_epoch18'
