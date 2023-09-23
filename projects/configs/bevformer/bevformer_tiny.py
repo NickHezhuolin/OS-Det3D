@@ -49,7 +49,7 @@ queue_length = 3 # each sequence contains `queue_length` frames.
 
 model = dict(
     type='BEVFormer',
-    use_grid_mask=True,
+    use_grid_mask=False,
     video_test_mode=True,
     pretrained=dict(img='torchvision://resnet50'),
     img_backbone=dict(
@@ -208,7 +208,7 @@ test_pipeline = [
 ]
 
 data = dict(
-    samples_per_gpu=1,
+    samples_per_gpu=4,
     workers_per_gpu=4,
     train=dict(
         type=dataset_type,
@@ -268,3 +268,4 @@ log_config = dict(
     ])
 
 checkpoint_config = dict(interval=1)
+work_dirs = 'work_dirs/bevformer_tiny'

@@ -49,13 +49,13 @@ class OWCustomNuScenesDataset5CLS(NuScenesDataset):
         'bicycle': 'cycle.without_rider',
         'barrier': '',
         # 'traffic_cone': '',
-        'unknow_obj': '',
+        'unk_obj': '',
     }
     TRAIN_CLASSES = (    'car', 'construction_vehicle', 'barrier',
     'bicycle', 'pedestrian'
                 )
     EVAL_CLASSES = (    'car', 'construction_vehicle', 'barrier',
-    'bicycle', 'pedestrian', 'unknow_obj')
+    'bicycle', 'pedestrian', 'unk_obj')
 
     def __init__(self, queue_length=4, bev_size=(200, 200), overlap_test=False, *args, **kwargs):
         super().__init__(*args, **kwargs)

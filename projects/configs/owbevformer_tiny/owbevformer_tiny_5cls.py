@@ -35,7 +35,7 @@ train_class_names = [
 
 eval_class_names = [
     'car', 'construction_vehicle', 'barrier',
-     'bicycle', 'pedestrian'
+     'bicycle', 'pedestrian', 'unk_obj'
 ]
 
 input_modality = dict(
@@ -51,7 +51,7 @@ _ffn_dim_ = _dim_*2
 _num_levels_ = 1
 bev_h_ = 50
 bev_w_ = 50
-queue_length = 2 # each sequence contains `queue_length` frames.
+queue_length = 3 # each sequence contains `queue_length` frames.
 
 model = dict(
     type='BEVFormer',
@@ -96,7 +96,7 @@ model = dict(
             embed_dims=_dim_,
             encoder=dict(
                 type='BEVFormerEncoder',
-                num_layers=1,
+                num_layers=6,
                 pc_range=point_cloud_range,
                 num_points_in_pillar=4,
                 return_intermediate=False,
@@ -228,7 +228,7 @@ data = dict(
     train=dict(
         type=dataset_type,
         data_root=data_root,
-        ann_file=data_root + 'nuscenes_infos_temporal_train.pkl',
+        ann_file=data_root + 'nuscenes_half_infos_temporal_train.pkl',
         pipeline=train_pipeline,
         classes=train_class_names,
         modality=input_modality,
@@ -283,5 +283,5 @@ log_config = dict(
     ])
 
 checkpoint_config = dict(interval=1)
-load_from = 'ckpts/bevformer_tiny_epoch_12_5_cls.pth'
-work_dir = 'work_dirs/owbevformer_tiny_5cls_0912_bevformer_tiny_epoch18'
+load_from = 'work_dirs/bevformer_tiny_5cls/epoch_12.pth'
+work_dir = 'work_dirs/owbevformer_tiny_5cls_bevformer_tiny_epoch12_0921'
