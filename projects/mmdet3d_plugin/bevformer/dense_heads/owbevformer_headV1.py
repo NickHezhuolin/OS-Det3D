@@ -18,7 +18,7 @@ import time
 from nuscenes.nuscenes import NuScenes
 
 @HEADS.register_module()
-class OWBEVFormerHead(DETRHead):
+class OWBEVFormerHeadV1(DETRHead):
     """Head of Detr3D.
     Args:
         with_box_refine (bool): Whether to refine the reference points
@@ -77,7 +77,7 @@ class OWBEVFormerHead(DETRHead):
         self.real_w = self.pc_range[3] - self.pc_range[0]
         self.real_h = self.pc_range[4] - self.pc_range[1]
         self.num_cls_fcs = num_cls_fcs - 1
-        super(OWBEVFormerHead, self).__init__(
+        super(OWBEVFormerHeadV1, self).__init__(
             *args, transformer=transformer, **kwargs)
         if loss_nc_cls is not None:
             self.loss_nc_cls = build_loss(loss_nc_cls)
@@ -380,7 +380,10 @@ class OWBEVFormerHead(DETRHead):
 
         # DETR
         bbox_targets[pos_inds] = sampling_result.pos_gt_bboxes
-        return (labels, label_weights, bbox_targets, bbox_weights,
+        
+        targets_indices = (pos_inds, assign_result.gt_inds[assign_result.gt_inds > 0] - 1)
+
+        return (labels, label_weights, bbox_targets, bbox_weights, targets_indices,
                 pos_inds, neg_inds)
 
     def get_targets(self,
@@ -426,13 +429,13 @@ class OWBEVFormerHead(DETRHead):
         ]
 
         (labels_list, label_weights_list, bbox_targets_list,
-         bbox_weights_list, pos_inds_list, neg_inds_list) = multi_apply(
+         bbox_weights_list, targets_indices, pos_inds_list, neg_inds_list) = multi_apply(
             self._get_target_single, cls_scores_list, bbox_preds_list,
             gt_labels_list, gt_bboxes_list, gt_bboxes_ignore_list)
         num_total_pos = sum((inds.numel() for inds in pos_inds_list))
         num_total_neg = sum((inds.numel() for inds in neg_inds_list))
         return (labels_list, label_weights_list, bbox_targets_list,
-                bbox_weights_list, num_total_pos, num_total_neg, pos_inds_list)
+                bbox_weights_list, targets_indices, num_total_pos, num_total_neg, pos_inds_list)
         
     def loss_single(self,
                     cls_scores,
@@ -505,7 +508,7 @@ class OWBEVFormerHead(DETRHead):
             loss_bbox = torch.nan_to_num(loss_bbox)
         return loss_cls, loss_bbox
         
-    def get_target_owod(self,
+    def get_owod_target(self,
                         cls_score,
                         bbox_pred_list,
                         backbone_feature,
@@ -549,6 +552,13 @@ class OWBEVFormerHead(DETRHead):
 
         queries = torch.arange(owod_bbox_preds_list.shape[0])
         img_metas = img_metas_list[0]
+        # compute owod target  
+        querie_box = queries.clone().detach().to(owod_device)
+        combined = torch.cat((querie_box, pos_inds))
+        uniques, counts = combined.unique(return_counts=True)
+        
+        # 未匹配框
+        unmatched_indices = uniques[counts == 1]
         
         # gt_bbox.shape = [900,9] , xyz, lwh, raw, vx, vy
         # boxes.shape=10 , 取boxes[:,:8] , xyz, lwh, sinθ, cosθ, vx, vy
@@ -616,7 +626,7 @@ class OWBEVFormerHead(DETRHead):
         
         # 上采样bev_feature shape(200 x 200) 转换 到bev下
         upsaple = nn.Upsample(size=(int(self.real_h*10),int(self.real_w*10)), mode='bilinear', align_corners=True) # 转到真实lidar尺寸 ( self.real_h*10 = 1024 x self.real_w*10 = 1024 )
-        bev_feat_up = upsaple(backbone_feature[0][0].unsqueeze(0)) # 1x1x1024x1024
+        bev_feat_up = upsaple(backbone_feature.unsqueeze(0)) # 1x1x1024x1024
         bev_feat = bev_feat_up.squeeze(0).squeeze(0) # 1024x1024
         
         # 确保xy，最大最小值在bev_feat的范围内
@@ -638,7 +648,67 @@ class OWBEVFormerHead(DETRHead):
         _, topk_inds = torch.topk(-means_bb, self.topk)
         topk_inds = topk_inds.to(owod_device)
         
-        pdb.set_trace()
+        #############################################
+        # # for vis result : bev_embed
+        # import seaborn as sns
+        # import matplotlib.pyplot as plt
+        # from matplotlib.patches import Rectangle
+        # import sys
+        # import os
+
+        # sample_idx = img_metas['sample_idx']
+        
+        # visual_dir = f'visualization_ow/{sample_idx}/'
+        # if not os.path.isdir(visual_dir):
+        #     os.makedirs(visual_dir)
+            
+        # # 生成 gt 数据
+        # from nuscenes.nuscenes import NuScenes
+        # nusc = NuScenes(version='v1.0-trainval', dataroot='data/nuscenes', verbose=True)
+        # my_sample = nusc.get('sample', sample_idx)
+        
+        # sensor = ['CAM_FRONT', 'CAM_FRONT_RIGHT', 'CAM_BACK_RIGHT', 'CAM_BACK', 'CAM_BACK_LEFT', 'CAM_FRONT_LEFT', 'LIDAR_TOP']
+        # # sensor = ['CAM_FRONT', 'LIDAR_TOP']
+        # for ss in sensor:
+        #     cam_data = nusc.get('sample_data', my_sample['data'][ss])
+        #     file_name = f'{visual_dir}gt_{ss}.png' 
+        #     nusc.render_sample_data(cam_data['token'], out_path=file_name)
+        #     print(f"{file_name} Save successfully!")
+        
+        # #生成 bev_feat 可视化
+        # dense_heatmap_bev_queries_image = bev_feat # 1024x1024
+        # dense_image_bev_queries = dense_heatmap_bev_queries_image.cpu().clone()  # clone the tensor
+        # # dense_image_bev_queries = dense_image_bev_queries.squeeze(0)  # remove the fake batch dimension
+        
+        # # query.shape = 假设900个 query box 均匀分布在 bev 空间中, 忽略 z 轴
+        # unmatched_boxes_print = (unmatched_boxes*10).long().cpu().detach().numpy() # (900, 4)
+        # gt_boxes_print = (gt_boxes_img*10).long().cpu().detach().numpy() # (gt_num, 4)
+        # ow_boxes_print = (unmatched_boxes[topk_inds]*10).long().cpu().detach().numpy()  # (3, 4)
+         
+        # plt.figure()
+        # fig_path = visual_dir + f'C_BEV_after_transformer.png'
+        # ax = sns.heatmap(dense_image_bev_queries.detach().numpy())  # Added ax
+
+        # # For each gt_box, draw a rectangle
+        # for box in gt_boxes_print:
+        #     xmin, ymin, xmax, ymax = box
+        #     rect = Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='g', facecolor='none')
+        #     ax.add_patch(rect)
+            
+        # for box in ow_boxes_print:
+        #     xmin, ymin, xmax, ymax = box
+        #     rect = Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='b', facecolor='none')
+        #     ax.add_patch(rect)
+            
+        # plt.gca().invert_yaxis()
+        # plt.title('C_BEV_after_transformer')
+        # hm = ax.get_figure()  # Modified this line as well
+        # hm.savefig(fig_path, dpi=36*36)
+        # plt.close()
+        # print(f"{fig_path} Save successfully!")
+        
+        # pdb.set_trace()
+        #############################################
         
         return topk_inds
     
@@ -676,7 +746,7 @@ class OWBEVFormerHead(DETRHead):
         cls_reg_targets = self.get_targets(cls_scores_list, bbox_preds_list,
                                            gt_bboxes_list, gt_labels_list,
                                            gt_bboxes_ignore_list)
-        (labels_list, label_weights_list, bbox_targets_list, bbox_weights_list,
+        (labels_list, label_weights_list, bbox_targets_list, bbox_weights_list, targets_indices,
          num_total_pos, num_total_neg, pos_inds_list) = cls_reg_targets
 
         # not finished
@@ -686,76 +756,49 @@ class OWBEVFormerHead(DETRHead):
                                                         gt_bboxes_ignore_list,
                                                         )
         
-
-
-        labels = torch.cat(labels_list, 0)
+        owod_num = owod_targets.shape[0]
+        
+        # class init - list to tensor
+        labels = torch.cat(labels_list, 0) 
         label_weights = torch.cat(label_weights_list, 0)
         bbox_targets = torch.cat(bbox_targets_list, 0)
         bbox_weights = torch.cat(bbox_weights_list, 0)
-        
-        # ------------------------------------------------- 1 batch
-        
-        
-        
-        # -------------------------------------------------
-        
-        # owod labels cls init 
-        if cls_scores.shape[0]>1:
-            # multi batch_size
-            owod_labels_idx = [tup[0][-self.topk:] for tup in owod_indices]
-            
-            final_owod_labels_idx_list = []
-            add_constants = list(range(len(owod_labels_idx)))
-            
-            # 循环遍历每个截取的张量和对应的常数
-            for i, (tensor, const) in enumerate(zip(owod_labels_idx, add_constants)):
-                # 将张量转换为CPU上的NumPy数组（如果你希望保持在GPU上，也可以跳过这一步）
-                numpy_arr = tensor.cpu().numpy()
-                
-                # 扩展final_list以包含原始元素和加上对应常数之后的元素
-                final_owod_labels_idx_list.extend(numpy_arr + const*cls_scores.shape[1])
-            
-            labels[final_owod_labels_idx_list] = self.num_classes - 1
-            
-            # nc_cls init
-            nc_src_logits = nc_cls_scores.clone()
-            nc_idx = [tup[0] for tup in owod_indices]
-            
-            nc_target_classes_o = [torch.full_like(t[J],0) for t, (_, J) in zip(owod_gt_labels_list, owod_indices)]
-            nc_target_classes = torch.full(nc_src_logits.shape[:2], 1, dtype=torch.int64, device=nc_src_logits.device) # class : 0-1
 
-            assert len(nc_idx) == len(nc_target_classes_o)
-            for i in range(len(nc_idx)):
-                nc_target_classes[i][nc_idx[i]] = nc_target_classes_o[i]
-            nc_labels = nc_target_classes.reshape(-1)
-        else:
-            # single batch_size
-            owod_labels_idx = owod_indices[0][0][-self.topk:] 
-            labels[owod_labels_idx] = self.num_classes - 1  # TODO : set a unkown cls
-   
-            # nc_cls init
-            nc_src_logits = nc_cls_scores.clone()
-            nc_idx = owod_indices[0][0]
-            
-            nc_target_classes_o = [torch.full_like(t[J],0) for t, (_, J) in zip(owod_gt_labels_list, owod_indices)]
-            nc_target_classes = torch.full(nc_src_logits.shape[:2], 1, dtype=torch.int64, device=nc_src_logits.device) # class : 0-1
-            
-            nc_target_classes[0][nc_idx] = nc_target_classes_o[0]
-            nc_labels = nc_target_classes[0]
-            
+        # owod labels - cls init
+        target_labels_idx = targets_indices[0][0]
+        owod_labels_idx = owod_targets
+        target_sort_idx = targets_indices[0][1]
+        owod_sort_idx = torch.arange(num_total_pos, num_total_pos + owod_num).to(target_sort_idx.device)
+        ow_label = torch.full((owod_num,), cls_scores.size(2) - 1).to(target_sort_idx.device)
+        all_indices = [(torch.cat((target_labels_idx, owod_labels_idx)), torch.cat((target_sort_idx, owod_sort_idx)))]
+        owod_gt_labels_list = [torch.cat((gt_labels_list[0], ow_label))]
+        
+        # nc_cls init
+        nc_src_logits = nc_cls_scores.clone()
+        nc_idx = all_indices[0][0]
+        nc_target_classes_o = [torch.full_like(t[J],0) for t, (_, J) in zip(owod_gt_labels_list, all_indices)]
+
+        nc_target_classes = torch.full(nc_src_logits.shape[:2], 1, dtype=torch.int64, device=nc_src_logits.device) # class : 0-1
+        nc_target_classes[0][nc_idx] = nc_target_classes_o[0]
+        nc_labels = nc_target_classes[0]
+
+        # owod setting
+        owod_pos = num_total_pos + owod_num
+        owod_neg = num_total_neg - owod_num
+
         # classification loss
         cls_scores = cls_scores.reshape(-1, self.cls_out_channels)
         # construct weighted avg_factor to match with the official DETR repo
         cls_avg_factor = owod_pos * 1.0 + \
-            num_total_neg * self.bg_cls_weight
+            owod_neg * self.bg_cls_weight
         if self.sync_cls_avg_factor:
             cls_avg_factor = reduce_mean(
                 cls_scores.new_tensor([cls_avg_factor]))
-
         cls_avg_factor = max(cls_avg_factor, 1)
+
         loss_cls = self.loss_cls(
             cls_scores, labels, label_weights, avg_factor=cls_avg_factor)
-        
+
         # Novelty classification loss
         nc_cls_scores = nc_cls_scores.reshape(-1, 2)
         # construct weighted avg_factor to match with the official DETR repo
@@ -771,25 +814,20 @@ class OWBEVFormerHead(DETRHead):
 
         # Compute the average number of gt boxes accross all gpus, for
         # normalization purposes
-        num_total_pos = loss_cls.new_tensor([num_total_pos])
-        num_total_pos = torch.clamp(reduce_mean(num_total_pos), min=1).item()
-
+        owod_pos = loss_cls.new_tensor([owod_pos])
+        owod_pos = torch.clamp(reduce_mean(owod_pos), min=1).item()
         # regression L1 loss
         bbox_preds = bbox_preds.reshape(-1, bbox_preds.size(-1))
         normalized_bbox_targets = normalize_bbox(bbox_targets, self.pc_range)
         isnotnan = torch.isfinite(normalized_bbox_targets).all(dim=-1)
         bbox_weights = bbox_weights * self.code_weights
-
         loss_bbox = self.loss_bbox(
-            bbox_preds[isnotnan, :10], normalized_bbox_targets[isnotnan,
-                                                               :10], bbox_weights[isnotnan, :10],
-            avg_factor=num_total_pos)
-        if digit_version(TORCH_VERSION) >= digit_version('1.8'):
-            loss_cls = torch.nan_to_num(loss_cls)
-            loss_bbox = torch.nan_to_num(loss_bbox)
-            loss_nc = torch.nan_to_num(loss_nc)
-            
-        return loss_cls, loss_bbox, loss_nc
+                bbox_preds[isnotnan, :10], normalized_bbox_targets[isnotnan, :10], bbox_weights[isnotnan, :10], avg_factor=num_total_pos)
+
+        # all loss
+        loss_cls = torch.nan_to_num(loss_cls)
+        loss_bbox = torch.nan_to_num(loss_bbox)
+        loss_nc = torch.nan_to_num(loss_nc)
 
     @force_fp32(apply_to=('preds_dicts'))
     def loss(self,

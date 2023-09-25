@@ -136,5 +136,7 @@ dmypy.json
 .pyre/
 
 *.sh
+.png
 mmdetection3d/
 mmdetection3d
+visualization_ow/
