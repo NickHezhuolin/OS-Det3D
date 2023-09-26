@@ -735,19 +735,19 @@ class OWBEVFormerHeadV1RPN(DETRHead):
         
         # gt_label_list + owod_targets
         owod_num = owod_targets.shape[0]
-        original_labels_tensor = gt_labels_list[0]
+        original_labels_tensor = gt_labels_list[0].clone()
         original_labels_tensor_device = original_labels_tensor.device
         ow_label = torch.full((owod_num,), cls_scores.size(2) - 1).to(original_labels_tensor_device)
-        new_tensor = torch.cat((original_labels_tensor, ow_label))
-        gt_labels_list[0] = new_tensor
+        ow_label_new_tensor = torch.cat((original_labels_tensor, ow_label))
+        ow_gt_labels_list = [ow_label_new_tensor]
         
-        original_bboxes_tensor = gt_bboxes_list[0]
+        original_bboxes_tensor = gt_bboxes_list[0].clone()
         original_bboxes_tensor_device = original_bboxes_tensor.device
-        new_tensor = torch.cat((original_bboxes_tensor, owod_targets.to(original_bboxes_tensor_device)), dim=0)
-        gt_bboxes_list[0] = new_tensor
+        ow_bbox_new_tensor = torch.cat((original_bboxes_tensor, owod_targets.to(original_bboxes_tensor_device)), dim=0)
+        ow_gt_bboxes_list = [ow_bbox_new_tensor]
         
         cls_reg_targets = self.get_targets(cls_scores_list, bbox_preds_list,
-                                           gt_bboxes_list, gt_labels_list,
+                                           ow_gt_bboxes_list, ow_gt_labels_list,
                                            gt_bboxes_ignore_list)
         
         (labels_list, label_weights_list, bbox_targets_list, bbox_weights_list, targets_indices,
@@ -793,7 +793,7 @@ class OWBEVFormerHeadV1RPN(DETRHead):
 
         loss_nc = self.loss_nc_cls(
                 nc_cls_scores, nc_labels, label_weights, avg_factor=nc_cls_avg_factor)
-
+        pdb.set_trace()
         # Compute the average number of gt boxes accross all gpus, for
         # normalization purposes
         num_total_pos = loss_cls.new_tensor([num_total_pos])
