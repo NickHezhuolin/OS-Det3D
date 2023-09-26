@@ -12,7 +12,7 @@ from mmdet3d.core.bbox.coders import build_bbox_coder
 from projects.mmdet3d_plugin.core.bbox.util import normalize_bbox
 from mmcv.runner import force_fp32, auto_fp16
 from mmdet.models import build_loss
-
+import pickle
 import pdb
 import time
 from nuscenes.nuscenes import NuScenes
@@ -772,7 +772,7 @@ class OWBEVFormerHeadV1(DETRHead):
         ow_label = torch.full((owod_num,), cls_scores.size(2) - 1).to(target_sort_idx.device)
         all_indices = [(torch.cat((target_labels_idx, owod_labels_idx)), torch.cat((target_sort_idx, owod_sort_idx)))]
         owod_gt_labels_list = [torch.cat((gt_labels_list[0], ow_label))]
-        
+
         # nc_cls init
         nc_src_logits = nc_cls_scores.clone()
         nc_idx = all_indices[0][0]
@@ -781,7 +781,7 @@ class OWBEVFormerHeadV1(DETRHead):
         nc_target_classes = torch.full(nc_src_logits.shape[:2], 1, dtype=torch.int64, device=nc_src_logits.device) # class : 0-1
         nc_target_classes[0][nc_idx] = nc_target_classes_o[0]
         nc_labels = nc_target_classes[0]
-
+        
         # owod setting
         owod_pos = num_total_pos + owod_num
         owod_neg = num_total_neg - owod_num
@@ -828,6 +828,7 @@ class OWBEVFormerHeadV1(DETRHead):
         loss_cls = torch.nan_to_num(loss_cls)
         loss_bbox = torch.nan_to_num(loss_bbox)
         loss_nc = torch.nan_to_num(loss_nc)
+        return loss_cls, loss_bbox, loss_nc
 
     @force_fp32(apply_to=('preds_dicts'))
     def loss(self,

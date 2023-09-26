@@ -260,4 +260,5 @@ def main():
 
 
 if __name__ == '__main__':
+    torch.multiprocessing.set_sharing_strategy('file_system')
     main()
