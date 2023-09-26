@@ -509,10 +509,11 @@ class OWBEVFormerHeadV1RPN(DETRHead):
         return loss_cls, loss_bbox
         
     def get_owod_target(self,
-                        device,
+                        cls_scores_list,
                         backbone_feature,
                         img_metas_list,
                         gt_bboxes_list,
+                        gt_labels_list
                         ):
         """"Compute regression and classification targets for one image.
         Outputs from a single decoder layer of a single feature level are used.
@@ -537,18 +538,22 @@ class OWBEVFormerHeadV1RPN(DETRHead):
                 - pos_inds (Tensor): Sampled positive indices for each image.
                 - neg_inds (Tensor): Sampled negative indices for each image.
         """
-        owod_device = device
-        # Lidar RPN proposal
-        proposal = img_metas_list[0]['proposal']
-        proposal_bbox = torch.stack(proposal, dim=0)[:,:9].to(owod_device)
+        owod_device = cls_scores_list[0].device
         
+        # read from proposal_file
+        proposal_file_name = img_metas_list[0]['proposal']
+        with open(proposal_file_name, 'rb') as f:
+                proposal = pickle.load(f)
+        
+        # Lidar RPN proposal
+        proposal_bbox = torch.stack(proposal, dim=0)[:,:9].to(owod_device)
         queries = torch.arange(proposal_bbox.shape[0])
         querie_box = queries.clone().to(owod_device)
         unmatched_indices = querie_box
         
         # gt_bbox.shape = [900,9] , xyz, lwh, raw, vx, vy
         # boxes.shape=10 , 取boxes[:,:8] , xyz, lwh, sinθ, cosθ, vx, vy
-        gt_boxes = gt_bboxes_list[0]
+        gt_boxes = gt_bboxes_list[0].clone()
         boxes = proposal_bbox
 
         # 将3D框中心点转换为角点,box_3d_points_tensor.shape=[900,8,3]
@@ -696,7 +701,21 @@ class OWBEVFormerHeadV1RPN(DETRHead):
         # # pdb.set_trace()
         #############################################
         
-        return proposal_bbox[topk_inds]
+        # gt_label_list + owod_targets
+        owod_targets = proposal_bbox[topk_inds] 
+        owod_num = owod_targets.shape[0]
+        original_labels_tensor = gt_labels_list[0].clone()
+        original_labels_tensor_device = original_labels_tensor.device
+        ow_label = torch.full((owod_num,), cls_scores_list[0].shape[1] - 1).to(original_labels_tensor_device)
+        ow_label_new_tensor = torch.cat((original_labels_tensor, ow_label))
+        ow_gt_labels_list = [ow_label_new_tensor]
+        
+        original_bboxes_tensor = gt_bboxes_list[0].clone()
+        original_bboxes_tensor_device = original_bboxes_tensor.device
+        ow_bbox_new_tensor = torch.cat((original_bboxes_tensor, owod_targets.to(original_bboxes_tensor_device)), dim=0)
+        ow_gt_bboxes_list = [ow_bbox_new_tensor]
+        
+        return ow_gt_labels_list, ow_gt_bboxes_list
     
     def loss_single_owod(self,
                         cls_scores,
@@ -729,26 +748,11 @@ class OWBEVFormerHeadV1RPN(DETRHead):
         cls_scores_list = [cls_scores[i] for i in range(num_imgs)]
         bbox_preds_list = [bbox_preds[i] for i in range(num_imgs)]
         
-        owod_targets =  self.get_owod_target(bbox_preds_list[0].device,
-                        bev_heatmap_list, img_metas_list, gt_bboxes_list,)
-        
-        
-        # gt_label_list + owod_targets
-        owod_num = owod_targets.shape[0]
-        original_labels_tensor = gt_labels_list[0].clone()
-        original_labels_tensor_device = original_labels_tensor.device
-        ow_label = torch.full((owod_num,), cls_scores.size(2) - 1).to(original_labels_tensor_device)
-        ow_label_new_tensor = torch.cat((original_labels_tensor, ow_label))
-        ow_gt_labels_list = [ow_label_new_tensor]
-        
-        original_bboxes_tensor = gt_bboxes_list[0].clone()
-        original_bboxes_tensor_device = original_bboxes_tensor.device
-        ow_bbox_new_tensor = torch.cat((original_bboxes_tensor, owod_targets.to(original_bboxes_tensor_device)), dim=0)
-        ow_gt_bboxes_list = [ow_bbox_new_tensor]
-        
+        ow_gt_labels_list, ow_gt_bboxes_list =  self.get_owod_target(cls_scores_list,
+                                    bev_heatmap_list, img_metas_list, gt_bboxes_list, gt_labels_list)
+
         cls_reg_targets = self.get_targets(cls_scores_list, bbox_preds_list,
-                                           ow_gt_bboxes_list, ow_gt_labels_list,
-                                           gt_bboxes_ignore_list)
+                                           ow_gt_bboxes_list, ow_gt_labels_list, gt_bboxes_ignore_list)
         
         (labels_list, label_weights_list, bbox_targets_list, bbox_weights_list, targets_indices,
          num_total_pos, num_total_neg, pos_inds_list) = cls_reg_targets
@@ -761,9 +765,8 @@ class OWBEVFormerHeadV1RPN(DETRHead):
         
         # nc_cls init
         nc_src_logits = nc_cls_scores.clone()
-        nc_idx = pos_inds_list[0]
+        nc_idx = pos_inds_list[0].clone()
         nc_target_classes_o = [torch.full_like(nc_idx,0)]
-
         nc_target_classes = torch.full(nc_src_logits.shape[:2], 1, dtype=torch.int64, device=nc_src_logits.device) # class : 0-1
         nc_target_classes[0][nc_idx] = nc_target_classes_o[0]
         nc_labels = nc_target_classes[0]
@@ -790,10 +793,10 @@ class OWBEVFormerHeadV1RPN(DETRHead):
             nc_cls_avg_factor = reduce_mean(
                 nc_cls_scores.new_tensor([nc_cls_avg_factor]))
         nc_cls_avg_factor = max(nc_cls_avg_factor, 1)
-
+        
         loss_nc = self.loss_nc_cls(
                 nc_cls_scores, nc_labels, label_weights, avg_factor=nc_cls_avg_factor)
-        pdb.set_trace()
+        
         # Compute the average number of gt boxes accross all gpus, for
         # normalization purposes
         num_total_pos = loss_cls.new_tensor([num_total_pos])
