@@ -280,7 +280,7 @@ class OWBEVFormerHeadV1RPN(DETRHead):
         #     print(f"{file_name} Save successfully!")
         
         # #生成 bev_feat 可视化
-        # dense_heatmap_bev_queries_image = torch.mean(bev_embed.detach().permute(1, 2, 0).view(1, 256, 200, 200), dim=1)
+        # dense_heatmap_bev_queries_image = torch.mean(bev_embed.detach().permute(1, 2, 0).view(1, 256, 128, 128), dim=1)
         # dense_image_bev_queries = dense_heatmap_bev_queries_image.cpu().clone()  # clone the tensor
         # dense_image_bev_queries = dense_image_bev_queries.squeeze(0)  # remove the fake batch dimension
         

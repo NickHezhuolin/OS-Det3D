@@ -139,4 +139,4 @@ dmypy.json
 .png
 mmdetection3d/
 mmdetection3d
-visualization_ow/
+visualization/

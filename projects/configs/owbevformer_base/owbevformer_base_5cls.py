@@ -20,7 +20,7 @@ train_class_names = [
 
 eval_class_names = [
     'car', 'construction_vehicle', 'barrier',
-    'bicycle', 'pedestrian', 'unknow_obj'
+    'bicycle', 'pedestrian', 'unk_obj'
 ]
 
 img_norm_cfg = dict(
@@ -42,8 +42,8 @@ _dim_ = 256
 _pos_dim_ = _dim_//2
 _ffn_dim_ = _dim_*2
 _num_levels_ = 4
-bev_h_ = 200
-bev_w_ = 200
+bev_h_ = 128
+bev_w_ = 128
 queue_length = 4 # each sequence contains `queue_length` frames.
 
 model = dict(
@@ -55,7 +55,7 @@ model = dict(
         depth=101,
         num_stages=4,
         out_indices=(1, 2, 3),
-        frozen_stages=1,
+        frozen_stages=2,
         norm_cfg=dict(type='BN2d', requires_grad=False),
         norm_eval=True,
         style='caffe',
@@ -70,12 +70,12 @@ model = dict(
         num_outs=4,
         relu_before_extra_convs=True),
     pts_bbox_head=dict(
-        type='OWBEVFormerHeadV1',
+        type='OWBEVFormerHeadV1RPN',
         bev_h=bev_h_,
         bev_w=bev_w_,
         num_query=900,
         num_classes=TRAIN_NUM_CLASS+1,
-        topk=3,
+        topk=10,
         owod=True,
         owod_decoder_layer=6,
         in_channels=_dim_,
@@ -178,7 +178,7 @@ model = dict(
             iou_cost=dict(type='IoUCost', weight=0.0), # Fake cost. This is just to make it compatible with DETR head.
             pc_range=point_cloud_range))))
 
-dataset_type = 'OWCustomNuScenesDataset5CLS'
+dataset_type = 'OWCustomNuScenesDataset5CLSRPN'
 data_root = 'data/nuscenes/'
 file_client_args = dict(backend='disk')
 
@@ -219,7 +219,7 @@ data = dict(
     train=dict(
         type=dataset_type,
         data_root=data_root,
-        ann_file=data_root + 'nuscenes_infos_temporal_train.pkl',
+        ann_file=data_root + 'nuscenes_half_infos_temporal_train.pkl',
         pipeline=train_pipeline,
         classes=train_class_names,
         modality=input_modality,
@@ -274,5 +274,5 @@ log_config = dict(
     ])
 
 checkpoint_config = dict(interval=1)
-work_dir = 'work_dirs/owbevformer_base_5cls'
+work_dir = 'work_dirs/owbevformer_base_epoch_18_5_cls_rpn_with_bbox_refine_0927'
 load_from = 'ckpts/bevformer_base_epoch_18_5_cls.pth'
