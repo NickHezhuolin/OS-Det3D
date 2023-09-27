@@ -256,8 +256,8 @@ class OWBEVFormerHeadV1(DETRHead):
         
         # sample_idx = img_metas[0]['sample_idx']
         
-        # visual_dir = f'visualization/nuscenes/bevformer_base_val/bev_encoder_add_bbox/'
-        # source_dir = f'visualization/nuscenes/bevformer_base_val/source_lidar_gt/'
+        # visual_dir = f'visualization/nuscenes/bevformer_tiny_5cls_epoch_24_val/bev_embed/'
+        # source_dir = f'visualization/nuscenes/bevformer_tiny_val/source_lidar_gt/'
         # if not os.path.isdir(visual_dir):
         #     os.makedirs(visual_dir)
         # if not os.path.isdir(source_dir):
@@ -284,9 +284,9 @@ class OWBEVFormerHeadV1(DETRHead):
         # dense_image_bev_queries = dense_heatmap_bev_queries_image.cpu().clone()  # clone the tensor
         # dense_image_bev_queries = dense_image_bev_queries.squeeze(0)  # remove the fake batch dimension
         
-        # # query.shape = 假设900个 query box 均匀分布在 bev 空间中, 忽略 z 轴
-        # # mapping outputs_classes(all_bbox_preds).xyz to bev_embed : green
-        # # mapping outputs_coords(gt_bboxes_list).xyz to bev_embed : blue
+        # query.shape = 假设900个 query box 均匀分布在 bev 空间中, 忽略 z 轴
+        # mapping outputs_classes(all_bbox_preds).xyz to bev_embed : green
+        # mapping outputs_coords(gt_bboxes_list).xyz to bev_embed : blue
         
         # plt.figure()
         # fig_path = visual_dir + f'C_BEV_after_transformer_{sample_idx}.png'
@@ -302,7 +302,6 @@ class OWBEVFormerHeadV1(DETRHead):
         # for idx,t in enumerate(pred_bbox):
         #     array = t.squeeze(0)
         #     numpy.savetxt(f'./pred_bbox_{idx}.txt', array, fmt="%.6f")
-        # pdb.set_trace()
         #############################################
         if self.owod:
               outs = {

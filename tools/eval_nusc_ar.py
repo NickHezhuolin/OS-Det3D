@@ -644,15 +644,15 @@ class NuScenesEval(DetectionEval):
 
 if __name__ == "__main__":
 
-    result_path_ = '/home/hez4sgh/1_workspace/5_my_repo/OOD3D/work_dirs/owdetr3d_res101_gridmask_detr12_2_3cls_6epoch/pts_bbox/results_nusc.json'
+    result_path_ = 'test/owbevformer_tiny_5cls/Wed_Sep_27_03_38_25_2023/pts_bbox/results_nusc.json'
     eval_set_ = 'val'
-    dataroot_ = '/home/hez4sgh/1_workspace/5_my_repo/OOD3D/data/nuscenes/'
+    dataroot_ = 'data/nuscenes/'
     version_ = 'v1.0-trainval'
     config_path = ''
     plot_examples_ = 1
     render_curves_ = 0
     verbose_ = 1
-    output_dir_ = '/home/hez4sgh/1_workspace/5_my_repo/OOD3D/work_dirs/owdetr3d_res101_gridmask_detr12_2_3cls_6epoch/pts_bbox/'
+    output_dir_ = 'test/owbevformer_tiny_5cls/Wed_Sep_27_03_38_25_2023/pts_bbox/'
 
     if config_path == '':
         cfg_ = config_factory('detection_cvpr_2019')

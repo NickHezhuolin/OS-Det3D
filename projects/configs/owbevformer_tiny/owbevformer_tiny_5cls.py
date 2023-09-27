@@ -283,5 +283,5 @@ log_config = dict(
     ])
 
 checkpoint_config = dict(interval=1)
-load_from = 'work_dirs/bevformer_tiny_5cls/epoch_12.pth'
-work_dir = 'work_dirs/owbevformer_tiny_5cls_bevformer_tiny_epoch12_0921'
+load_from = 'ckpts/bevformer_tiny_epoch_18_5_cls.pth'
+work_dir = 'work_dirs/owbevformer_tiny_5cls_bevformer_tiny_epoch_test_0926'

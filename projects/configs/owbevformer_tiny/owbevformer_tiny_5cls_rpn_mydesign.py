@@ -1,3 +1,5 @@
+# BEvFormer-tiny consumes at lease 6700M GPU memory
+
 _base_ = [
     '../datasets/custom_nus-3d.py',
     '../_base_/default_runtime.py'
@@ -11,25 +13,23 @@ plugin_dir = 'projects/mmdet3d_plugin/'
 point_cloud_range = [-51.2, -51.2, -5.0, 51.2, 51.2, 3.0]
 voxel_size = [0.2, 0.2, 8]
 
-TRAIN_NUM_CLASS = 5
 
+TRAIN_NUM_CLASSES = 5
+
+
+img_norm_cfg = dict(
+    mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
+
+# For nuScenes we usually do 10-class detection
 train_class_names = [
     'car', 'construction_vehicle', 'barrier',
-    'bicycle', 'pedestrian'
+     'bicycle', 'pedestrian'
 ]
 
 eval_class_names = [
     'car', 'construction_vehicle', 'barrier',
-    'bicycle', 'pedestrian', 'unknow_obj'
+     'bicycle', 'pedestrian', 'unk_obj'
 ]
-
-img_norm_cfg = dict(
-    mean=[103.530, 116.280, 123.675], std=[1.0, 1.0, 1.0], to_rgb=False)
-# For nuScenes we usually do 10-class detection
-# class_names = [
-#     'car', 'truck', 'construction_vehicle', 'bus', 'trailer', 'barrier',
-#     'motorcycle', 'bicycle', 'pedestrian', 'traffic_cone'
-# ]
 
 input_modality = dict(
     use_lidar=False,
@@ -42,40 +42,39 @@ _dim_ = 256
 _pos_dim_ = _dim_//2
 _ffn_dim_ = _dim_*2
 _num_levels_ = 4
-bev_h_ = 200
-bev_w_ = 200
+bev_h_ = 128
+bev_w_ = 128
 queue_length = 4 # each sequence contains `queue_length` frames.
 
 model = dict(
     type='BEVFormer',
     use_grid_mask=True,
     video_test_mode=True,
+    pretrained=dict(img='torchvision://resnet50'),
     img_backbone=dict(
         type='ResNet',
-        depth=101,
+        depth=50,
         num_stages=4,
-        out_indices=(1, 2, 3),
+        out_indices=(3,),
         frozen_stages=1,
-        norm_cfg=dict(type='BN2d', requires_grad=False),
+        norm_cfg=dict(type='BN', requires_grad=False),
         norm_eval=True,
-        style='caffe',
-        dcn=dict(type='DCNv2', deform_groups=1, fallback_on_stride=False), # original DCNv2 will print log when perform load_state_dict
-        stage_with_dcn=(False, False, True, True)),
+        style='pytorch'),
     img_neck=dict(
         type='FPN',
-        in_channels=[512, 1024, 2048],
+        in_channels=[2048],
         out_channels=_dim_,
         start_level=0,
         add_extra_convs='on_output',
-        num_outs=4,
+        num_outs=_num_levels_,
         relu_before_extra_convs=True),
     pts_bbox_head=dict(
-        type='OWBEVFormerHeadV1',
+        type='OWBEVFormerHeadV1RPNV1',
         bev_h=bev_h_,
         bev_w=bev_w_,
         num_query=900,
-        num_classes=TRAIN_NUM_CLASS+1,
-        topk=3,
+        num_classes=TRAIN_NUM_CLASSES+1,
+        topk=30,
         owod=True,
         owod_decoder_layer=6,
         in_channels=_dim_,
@@ -144,7 +143,7 @@ model = dict(
             pc_range=point_cloud_range,
             max_num=300,
             voxel_size=voxel_size,
-            num_classes=TRAIN_NUM_CLASS+1),
+            num_classes=TRAIN_NUM_CLASSES+1),
         positional_encoding=dict(
             type='LearnedPositionalEncoding',
             num_feats=_pos_dim_,
@@ -178,7 +177,7 @@ model = dict(
             iou_cost=dict(type='IoUCost', weight=0.0), # Fake cost. This is just to make it compatible with DETR head.
             pc_range=point_cloud_range))))
 
-dataset_type = 'OWCustomNuScenesDataset5CLS'
+dataset_type = 'OWCustomNuScenesDataset5CLSRPN'
 data_root = 'data/nuscenes/'
 file_client_args = dict(backend='disk')
 
@@ -190,6 +189,7 @@ train_pipeline = [
     dict(type='ObjectRangeFilter', point_cloud_range=point_cloud_range),
     dict(type='ObjectNameFilter', classes=train_class_names),
     dict(type='NormalizeMultiviewImage', **img_norm_cfg),
+    dict(type='RandomScaleImageMultiViewImage', scales=[0.5]),
     dict(type='PadMultiViewImage', size_divisor=32),
     dict(type='DefaultFormatBundle3D', class_names=train_class_names),
     dict(type='CustomCollect3D', keys=['gt_bboxes_3d', 'gt_labels_3d', 'img'])
@@ -198,13 +198,15 @@ train_pipeline = [
 test_pipeline = [
     dict(type='LoadMultiViewImageFromFiles', to_float32=True),
     dict(type='NormalizeMultiviewImage', **img_norm_cfg),
-    dict(type='PadMultiViewImage', size_divisor=32),
+   
     dict(
         type='MultiScaleFlipAug3D',
         img_scale=(1600, 900),
         pts_scale_ratio=1,
         flip=False,
         transforms=[
+            dict(type='RandomScaleImageMultiViewImage', scales=[0.5]),
+            dict(type='PadMultiViewImage', size_divisor=32),
             dict(
                 type='DefaultFormatBundle3D',
                 class_names=eval_class_names,
@@ -219,7 +221,7 @@ data = dict(
     train=dict(
         type=dataset_type,
         data_root=data_root,
-        ann_file=data_root + 'nuscenes_infos_temporal_train.pkl',
+        ann_file=data_root + 'nuscenes_half_infos_temporal_train.pkl',
         pipeline=train_pipeline,
         classes=train_class_names,
         modality=input_modality,
@@ -262,7 +264,7 @@ lr_config = dict(
     warmup_ratio=1.0 / 3,
     min_lr_ratio=1e-3)
 total_epochs = 6
-evaluation = dict(interval=1, pipeline=test_pipeline)
+evaluation = dict(interval=6, pipeline=test_pipeline)
 
 runner = dict(type='EpochBasedRunner', max_epochs=total_epochs)
 
@@ -274,5 +276,5 @@ log_config = dict(
     ])
 
 checkpoint_config = dict(interval=1)
-work_dir = 'work_dirs/owbevformer_base_5cls'
-load_from = 'ckpts/bevformer_base_epoch_18_5_cls.pth'
+load_from = 'work_dirs/bevformer_tiny_5cls/epoch_12.pth'
+work_dir = 'work_dirs/owbevformer_tiny_5cls_bevformer_tiny_epoch12_with_rpn_with_bbox_refine_0927'
