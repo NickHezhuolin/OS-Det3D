@@ -11,7 +11,7 @@ from nuscenes.eval.common.data_classes import EvalBoxes
 from nuscenes.eval.tracking.data_classes import TrackingBox
 from nuscenes.eval.common.loaders import load_prediction, load_gt, add_center_dist, filter_eval_boxes
 from nuscenes.eval.detection.constants import TP_METRICS
-from nuscenes.eval.detection.data_classes import DetectionConfig, DetectionBox, DetectionMetrics,\
+from nuscenes.eval.detection.data_classes import DetectionConfig, DetectionMetrics, DetectionBox,\
     DetectionMetricDataList
 from nuscenes.eval.detection.render import summary_plot, class_pr_curve, class_tp_curve, dist_pr_curve, visualize_sample
 
@@ -21,10 +21,17 @@ from nuscenes.eval.common.utils import center_distance, scale_iou, yaw_diff, vel
 from nuscenes.eval.detection.data_classes import DetectionMetricData
 from nuscenes.utils.splits import create_splits_scenes
 
-NOT_TRAIN_CLASSES_FOR_8CLS = ['motorcycle', 'trailer']
-NOT_TRAIN_CLASSES_FOR_5CLS = ['truck','traffic_cone','bus', 'motorcycle', 'trailer']
-NOT_TRAIN_CLASSES_FOR_3CLS = ['truck','traffic_cone','bus', 'barrier', 'construction_vehicle', 'motorcycle', 'trailer']
 NOT_TRAIN_CLASSES = []
+NOT_TRAIN_CLASSES_FOR_5CLS = ['truck','traffic_cone','bus', 'motorcycle', 'trailer']
+
+# 多类用dict
+AP_KN = {}
+RECALL_KN = {}
+AR_KN = {}
+
+# 一类用list
+RECALL_UNK = []
+AR_UNK = []
 
 def calc_tp(md: DetectionMetricData, min_recall: float, metric_name: str) -> float:
     """ Calculates true positive errors. """
@@ -161,9 +168,6 @@ def custom_load_gt(nusc: NuScenes, eval_split: str, box_cls, verbose: bool = Fal
         for sample_annotation_token in sample_annotation_tokens:
 
             sample_annotation = nusc.get('sample_annotation', sample_annotation_token)
-            category_name = sample_annotation['category_name']
-            if category_name in NOT_TRAIN_CLASSES_FOR_3CLS:
-                sample_annotation['category_name'] = 'unk_obj'
             if box_cls == DetectionBox:
                 # Get label name in detection task and filter unused labels.
                 detection_name = custom_category_to_detection_name(sample_annotation['category_name'])
@@ -369,6 +373,24 @@ def accumulate(gt_boxes: EvalBoxes,
 
             # Then interpolate based on the confidences. (Note reversing since np.interp needs increasing arrays)
             match_data[key] = np.interp(conf[::-1], match_data['conf'][::-1], tmp[::-1])[::-1]
+            
+    rec_vis = tp / float(npos)
+    RECALL = max(rec_vis) * 100
+    AR = sum(rec_vis)/float(len(rec_vis)) * 100
+    
+    # 保存数值
+    if class_name != 'unk_obj':
+        if class_name not in RECALL_KN.keys():
+            RECALL_KN[class_name] = [RECALL]
+            AR_KN[class_name] = [AR]
+        else:
+            RECALL_KN[class_name].append(RECALL)
+            AR_KN[class_name].append(AR)
+    else:
+        RECALL_UNK.append(RECALL)
+        AR_UNK.append(AR)
+    
+    print(f'{class_name}_{dist_th}m Recall: {RECALL:.1f}, AR: {AR:.1f}')
             
     # rec_vis = tp / float(npos) 
     # import matplotlib.pyplot as plt
@@ -644,7 +666,7 @@ class NuScenesEval(DetectionEval):
 
 if __name__ == "__main__":
 
-    result_path_ = 'test/owbevformer_tiny_5cls/Wed_Sep_27_03_38_25_2023/pts_bbox/results_nusc.json'
+    result_path_ = 'test/owbevformer_tiny_5cls_rpn_wo_bbox_refine/Thu_Sep_28_06_20_03_2023/pts_bbox/results_nusc.json'
     eval_set_ = 'val'
     dataroot_ = 'data/nuscenes/'
     version_ = 'v1.0-trainval'
@@ -652,7 +674,7 @@ if __name__ == "__main__":
     plot_examples_ = 1
     render_curves_ = 0
     verbose_ = 1
-    output_dir_ = 'test/owbevformer_tiny_5cls/Wed_Sep_27_03_38_25_2023/pts_bbox/'
+    output_dir_ = 'test/owbevformer_tiny_5cls_rpn_wo_bbox_refine/Thu_Sep_28_06_20_03_2023/pts_bbox/'
 
     if config_path == '':
         cfg_ = config_factory('detection_cvpr_2019')
@@ -664,3 +686,25 @@ if __name__ == "__main__":
     nusc_eval = DetectionEval(nusc_, config=cfg_, result_path=result_path_, eval_set=eval_set_,
                                 output_dir=output_dir_, verbose=verbose_)
     nusc_eval.main(plot_examples=plot_examples_, render_curves=render_curves_)
+    
+    print("#####################################")
+    # 计算已知类别下每个类别的recall和ar
+    for k, v in RECALL_KN.items():
+        print(f'{k} - recall: {np.mean(v):.1f}')
+    for k, v in AR_KN.items():
+        print(f'{k} - ar: {np.mean(v):.1f}')
+    
+    # 输出数值
+    print("#####################################")
+    
+    # Convert the dictionary values to a list
+    all_recall = [value for sublist in RECALL_KN.values() for value in sublist]
+    all_ar = [value for sublist in AR_KN.values() for value in sublist]
+    # Calculate the mean
+    all_recall = np.mean(all_recall)
+    all_ar = np.mean(all_ar)
+    print('recall_kn:', all_recall)
+    print('ar_kn:', all_ar)
+    print('recall_unk:', np.mean(RECALL_UNK))
+    print('ar_unk:', np.mean(AR_UNK))
+    print("#####################################")
