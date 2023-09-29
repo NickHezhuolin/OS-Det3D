@@ -42,8 +42,8 @@ _dim_ = 256
 _pos_dim_ = _dim_//2
 _ffn_dim_ = _dim_*2
 _num_levels_ = 4
-bev_h_ = 200
-bev_w_ = 200
+bev_h_ = 128
+bev_w_ = 128
 queue_length = 4 # each sequence contains `queue_length` frames.
 
 model = dict(
@@ -55,7 +55,7 @@ model = dict(
         depth=101,
         num_stages=4,
         out_indices=(1, 2, 3),
-        frozen_stages=2,
+        frozen_stages=1,
         norm_cfg=dict(type='BN2d', requires_grad=False),
         norm_eval=True,
         style='caffe',
@@ -70,7 +70,7 @@ model = dict(
         num_outs=4,
         relu_before_extra_convs=True),
     pts_bbox_head=dict(
-        type='OWBEVFormerHeadV1RPNV1',
+        type='OWBEVFormerHeadV1RPN',
         bev_h=bev_h_,
         bev_w=bev_w_,
         num_query=900,
@@ -262,7 +262,7 @@ lr_config = dict(
     warmup_ratio=1.0 / 3,
     min_lr_ratio=1e-3)
 total_epochs = 6
-evaluation = dict(interval=1, pipeline=test_pipeline)
+evaluation = dict(interval=6, pipeline=test_pipeline)
 
 runner = dict(type='EpochBasedRunner', max_epochs=total_epochs)
 
@@ -274,5 +274,5 @@ log_config = dict(
     ])
 
 checkpoint_config = dict(interval=1)
-work_dir = 'work_dirs/owbevformer_base_epoch_18_5_cls'
+work_dir = 'work_dirs/owbevformer_base_epoch_18_5_cls_rpn_without_bbox_refine_0928_bev128'
 load_from = 'ckpts/bevformer_base_epoch_18_5_cls.pth'
