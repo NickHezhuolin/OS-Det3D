@@ -11,6 +11,7 @@ from typing import Tuple, List, Iterable
 import copy
 import cv2
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 import numpy as np
 import sklearn.metrics
 from PIL import Image
@@ -46,6 +47,15 @@ TRAIN_CLASS = [
     'human.pedestrian.construction_worker',
     'human.pedestrian.police_officer',
     ]
+
+CAMS_LIST = [
+    'CAM_FRONT_LEFT',
+    'CAM_FRONT',
+    'CAM_FRONT_RIGHT',
+    'CAM_BACK_LEFT',
+    'CAM_BACK',
+    'CAM_BACK_RIGHT',
+]
 
 class NuScenesMars(NuScenes):
     def __init__(self, 
@@ -585,8 +595,7 @@ class NuScenesExplorerMars(NuScenesExplorer):
             plt.show()
             
     def render_sample_pred_and_data_cam_and_lidar(self,
-                                                    sample_data_token_cam: str,
-                                                    sample_data_token_lidar: str,
+                                                    sample_data,
                                                     boxes_cam: List[Box],
                                                     boxes_lidar: List[Box],
                                                     with_anns: bool = True,
@@ -630,13 +639,27 @@ class NuScenesExplorerMars(NuScenesExplorer):
                 to False, the colors of the lidar data represent the distance from the center of the ego vehicle.
                 If show_lidarseg is True, show_panoptic will be set to False.
             """
-            fig = plt.figure(figsize=(18, 16))  # 创建一个总的画布，大小可以根据需求调整
+            
+            # 构建可视化图布局
+            # 创建一个总的画布，大小可以根据需求调整
+            fig = plt.figure(figsize=(18, 15)) 
+            gs = gridspec.GridSpec(3,3, height_ratios=[2, 1, 1])
             
             # 添加LiDAR的子图
-            ax1 = fig.add_subplot(1, 2, 1)  # 创建一个1行2列的子图布局，这是第1个子图
+            lidar_ax = fig.add_subplot(gs[0, :])
 
             # 添加相机的子图
-            ax2 = fig.add_subplot(1, 2, 2)  # 创建一个1行2列的子图布局，这是第2个子图
+            camera_axes = []
+            for i in range(1, 3):
+                for j in range(3):
+                    ax = fig.add_subplot(gs[i, j])
+                    camera_axes.append(ax)
+            
+            # 添加 sample_data 中的 token
+            sample_data_token_lidar = sample_data['data']['LIDAR_TOP']
+            sample_data_token_camera_list = []
+            for i in CAMS_LIST:
+                sample_data_token_camera_list.append(sample_data['data'][i])
             
             # Get sensor modality.
             sd_record = self.nusc.get('sample_data', sample_data_token_lidar)
@@ -700,7 +723,7 @@ class NuScenesExplorerMars(NuScenesExplorer):
                     viewpoint = np.eye(4)
 
                 # Init Lidar axes.
-                ax = ax1
+                # ax = lidar_ax
 
                 # Render map if requested.
                 if underlay_map:
@@ -714,7 +737,7 @@ class NuScenesExplorerMars(NuScenesExplorer):
                 colors = np.minimum(1, dists / axes_limit / np.sqrt(2))
                     
                 point_scale = 0.2 if sensor_modality == 'lidar' else 3.0
-                scatter = ax.scatter(points[0, :], points[1, :], c=colors, s=point_scale)
+                scatter = lidar_ax.scatter(points[0, :], points[1, :], c=colors, s=point_scale)
 
                 # Show velocities.
                 if sensor_modality == 'radar':
@@ -734,15 +757,15 @@ class NuScenesExplorerMars(NuScenesExplorer):
                     
                     colors_rgba = scatter.to_rgba(colors)
                     for i in range(points.shape[1]):
-                        ax.arrow(points[0, i], points[1, i], deltas_vel[0, i], deltas_vel[1, i], color=colors_rgba[i])
+                        lidar_ax.arrow(points[0, i], points[1, i], deltas_vel[0, i], deltas_vel[1, i], color=colors_rgba[i])
                         
                         if show_radar_raw_velo:
                             # code for radar velocity without compensated starts below
-                            ax.arrow(points[0, i], points[1, i], deltas_vel_[0, i], deltas_vel_[1, i], color='pink')
+                            lidar_ax.arrow(points[0, i], points[1, i], deltas_vel_[0, i], deltas_vel_[1, i], color='pink')
                             # code for radar velocity without compensated end here
 
                 # Show ego vehicle.
-                ax.plot(0, 0, 'x', color='red')
+                lidar_ax.plot(0, 0, 'x', color='red')
 
                 # Get boxes in lidar frame.
                 _, boxes_pred_lidar, _ = self.nusc.get_sample_data_given_boxes(
@@ -765,9 +788,9 @@ class NuScenesExplorerMars(NuScenesExplorer):
                             c = color_mapping[tr_id  % len(color_mapping)]
                         # print(c_box)
                         # print("original color", np.array(self.get_color(box.name)) / 255.0)
-                        box.render(ax, view=np.eye(4), colors=(c,c,c))
+                        box.render(lidar_ax, view=np.eye(4), colors=(c,c,c))
                         # print(c_box, np.array(self.get_color(box.name)) / 255.0)
-                        ax.arrow(
+                        lidar_ax.arrow(
                             box.center[0], box.center[1], box.velocity[0], box.velocity[1],
                             color=c, width=0.25, )
                             # color='cyan', width=0.25, )
@@ -782,95 +805,95 @@ class NuScenesExplorerMars(NuScenesExplorer):
                         if hasattr(box, 'track_ind'): # this is true
                             tr_id = box.track_ind
                             c = color_mapping[tr_id  % len(color_mapping)]
-                        box.render(ax, view=np.eye(4), colors=(c,c,c))
-                        ax.arrow(
+                        box.render(lidar_ax, view=np.eye(4), colors=(c,c,c))
+                        lidar_ax.arrow(
                             box.center[0], box.center[1], box.velocity[0], box.velocity[1],
                             color=c, width=0.25, )
 
                         # Add text label
-                        object_name = box.name.split(".")[1]
-                        ax.text(box.center[0], box.center[1], object_name, fontsize=6, color='red', zorder=5)
-
+                        lidar_ax.axis('off')
 
                 # Limit visible range.
-                ax.set_xlim(-axes_limit, axes_limit)
-                ax.set_ylim(-axes_limit, axes_limit)
-                
-            sd_record = self.nusc.get('sample_data', sample_data_token_cam)
-            sensor_modality = sd_record['sensor_modality']    
+                lidar_ax.set_xlim(-axes_limit, axes_limit)
+                lidar_ax.set_ylim(-axes_limit, axes_limit)
             
-            if sensor_modality == 'camera':
-                # Load boxes and image.
-                data_path, boxes_pred_cam, camera_intrinsic = self.nusc.get_sample_data_given_boxes(
-                    sample_data_token_cam, boxes_cam, box_vis_level=box_vis_level)
-                data_path, boxes_gt, camera_intrinsic = self.nusc.get_sample_data(sample_data_token_cam,
-                                                                            box_vis_level=box_vis_level)
-                data = Image.open(data_path)
+            flag = 0
+            for i in range(6):
+                sample_data_token_cam = sample_data_token_camera_list[i]
+                sd_record = self.nusc.get('sample_data', sample_data_token_cam)
+                sensor_modality = sd_record['sensor_modality']    
+                boxes_cam_single = copy.deepcopy(boxes_cam)
+                if sensor_modality == 'camera':
+                    # Load boxes and image.
+                    data_path, boxes_pred_cam, camera_intrinsic = self.nusc.get_sample_data_given_boxes(
+                        sample_data_token_cam, boxes_cam_single, box_vis_level=box_vis_level)
+                    data_path, boxes_gt, camera_intrinsic = self.nusc.get_sample_data(sample_data_token_cam,
+                                                                                box_vis_level=box_vis_level)
+                    data = Image.open(data_path)
 
-                # Init cam axes.
-                ax = ax2
+                    # Init cam axes.
+                    ax = camera_axes[i]
 
-                # Show image.
-                ax.imshow(data)
-                
-                # Show boxes.
-                if with_anns:
-                    for box in boxes_pred_cam:
-                        if box.name != 'movable_object.unk_obj':
-                            continue
-                        else:
-                            c = np.array([0,1,0])
-                        if hasattr(box, 'track_ind'): # this is true
-                            tr_id = box.track_ind
-                            c = color_mapping[tr_id  % len(color_mapping)]
-                        #  if hasattr(box, 'track_ind'): # this is true
-                        box.render(ax, view=camera_intrinsic, normalize=True, colors=(c, c, c))
-                        center = box.center[:, np.newaxis]
-                        velo = box.velocity[:, np.newaxis]
-                        center_cam = view_points(center, camera_intrinsic, normalize=True)[:, 0]
-                        center_add_velo_cam = view_points(center + velo, camera_intrinsic, normalize=True)[:, 0]
-                        
-                        delta = center_add_velo_cam - center_cam
-                        ax.arrow(
-                            center_cam[0], center_cam[1], delta[0], delta[1],
-                            color=c, width=3.0, )
-                            # color='cyan', width=3.0, )
-                        
-                    for box in boxes_gt:
-                        if box.name != 'movable_object.unk_obj':
-                            c = np.array(self.get_color(box.name)) / 255.0
-                        else:
-                            c = np.array([0,0,1])
-                        box.render(ax, view=camera_intrinsic, normalize=True, colors=(c, c, c))
-                        center = box.center[:, np.newaxis]
-                        velo = box.velocity[:, np.newaxis]
-                        center_cam = view_points(center, camera_intrinsic, normalize=True)[:, 0]
-                        center_add_velo_cam = view_points(center + velo, camera_intrinsic, normalize=True)[:, 0]
-                        
-                        delta = center_add_velo_cam - center_cam
-                        ax.arrow(
-                            center_cam[0], center_cam[1], delta[0], delta[1],
-                            color='cyan', width=3.0, )
-                        
-                        # Add text label
-                        object_name = box.name.split(".")[1]
-                        ax.text(center_cam[0], center_cam[1], object_name, fontsize=6, color='red', zorder=5)
-                        
+                    # Show image.
+                    ax.imshow(data)
+                    
+                    # Show boxes.
+                    if with_anns:
+                        for box in boxes_pred_cam:
+                            if box.name != 'movable_object.unk_obj':
+                                continue
+                            else:
+                                flag = 1
+                                c = np.array([0,1,0])
+                            if hasattr(box, 'track_ind'): # this is true
+                                tr_id = box.track_ind
+                                c = color_mapping[tr_id  % len(color_mapping)]
+                            #  if hasattr(box, 'track_ind'): # this is true
+                            box.render(ax, view=camera_intrinsic, normalize=True, colors=(c, c, c))
+                            center = box.center[:, np.newaxis]
+                            velo = box.velocity[:, np.newaxis]
+                            center_cam = view_points(center, camera_intrinsic, normalize=True)[:, 0]
+                            center_add_velo_cam = view_points(center + velo, camera_intrinsic, normalize=True)[:, 0]
+                            
+                            delta = center_add_velo_cam - center_cam
+                            ax.arrow(
+                                center_cam[0], center_cam[1], delta[0], delta[1],
+                                color=c, width=3.0, )
+                                # color='cyan', width=3.0, )
+                            
+                        for box in boxes_gt:
+                            if box.name != 'movable_object.unk_obj':
+                                c = np.array(self.get_color(box.name)) / 255.0
+                            else:
+                                c = np.array([0,0,1])
+                            box.render(ax, view=camera_intrinsic, normalize=True, colors=(c, c, c))
+                            center = box.center[:, np.newaxis]
+                            velo = box.velocity[:, np.newaxis]
+                            center_cam = view_points(center, camera_intrinsic, normalize=True)[:, 0]
+                            center_add_velo_cam = view_points(center + velo, camera_intrinsic, normalize=True)[:, 0]
+                            
+                            delta = center_add_velo_cam - center_cam
+                            ax.arrow(
+                                center_cam[0], center_cam[1], delta[0], delta[1],
+                                color='cyan', width=3.0, )
+                            
+                            # Add text label
+                            object_name = box.name.split(".")[1]
+                            ax.text(center_cam[0], center_cam[1], object_name, fontsize=6, color='red', zorder=5)
+                            
+                    ax.axis('off')
+                    # Limit visible range.
+                    ax.set_xlim(0, data.size[0])
+                    ax.set_ylim(data.size[1], 0)
 
-                # Limit visible range.
-                ax.set_xlim(0, data.size[0])
-                ax.set_ylim(data.size[1], 0)
-
-            else:
-                raise ValueError("Error: Unknown sensor modality!")
-
-            ax.axis('off')
-            ax.set_title('{} {labels_type} - Pred'.format(
-                sd_record['channel'], labels_type='(predictions)' if lidarseg_preds_bin_path else ''))
-            ax.set_aspect('equal')
-
-            if out_path is not None:
+            # ax.axis('off')
+            # ax.set_title('{} {labels_type} - Pred'.format(
+            #     sd_record['channel'], labels_type='(predictions)' if lidarseg_preds_bin_path else ''))
+            # ax.set_aspect('equal')
+            
+            if out_path is not None and flag == 1:
                 plt.savefig(out_path, bbox_inches='tight', pad_inches=0, dpi=200)
+                print(out_path)
                 
             if verbose:
                 plt.show()
@@ -904,23 +927,37 @@ def load_results_json(results_path: str = None):
     results_dict = data['results']
     
     new_results_dict = {}
-    
+    unk_score_distribution_list = []
     for key, item in results_dict.items():
         new_item = []
         for _box_dict in item:
             if 'detection_name' in _box_dict:
                 # load detection box
-                score=_box_dict['detection_score']
-                if score < 0.20:
-                    continue
-                new_box = Box(
-                    center=_box_dict['translation'],
-                    size=_box_dict['size'],
-                    orientation=Quaternion(_box_dict['rotation']),
-                    score=_box_dict['detection_score'],
-                    velocity=_box_dict['velocity'] + [0],
-                    name=inverse_mapping[_box_dict['detection_name']],
-                    token=_box_dict['sample_token'])
+                if _box_dict['detection_name'] == "unk_obj":
+                    score=_box_dict['detection_score']
+                    unk_score_distribution_list.append(score)
+                    if score < 0.05:
+                        continue
+                    new_box = Box(
+                        center=_box_dict['translation'],
+                        size=_box_dict['size'],
+                        orientation=Quaternion(_box_dict['rotation']),
+                        score=_box_dict['detection_score'],
+                        velocity=_box_dict['velocity'] + [0],
+                        name=inverse_mapping[_box_dict['detection_name']],
+                        token=_box_dict['sample_token'])
+                else:
+                    score=_box_dict['detection_score']
+                    if score < 0.20:
+                        continue
+                    new_box = Box(
+                        center=_box_dict['translation'],
+                        size=_box_dict['size'],
+                        orientation=Quaternion(_box_dict['rotation']),
+                        score=_box_dict['detection_score'],
+                        velocity=_box_dict['velocity'] + [0],
+                        name=inverse_mapping[_box_dict['detection_name']],
+                        token=_box_dict['sample_token'])
             else:
                 # then it is track box
                 center_ = _box_dict['translation']
@@ -937,8 +974,19 @@ def load_results_json(results_path: str = None):
             new_item.append(new_box)
         new_results_dict[key] = new_item
 
+    import matplotlib.pyplot as plt
+
+    def visualize_scores_distribution(scores: list):
+        plt.hist(scores, bins=50, facecolor="blue", edgecolor="black", alpha=0.7)
+        plt.xlabel("Score")
+        plt.ylabel("Number of Boxes")
+        plt.title("Distribution of unk_obj Scores")
+        plt.savefig("./unk_distribution.png", bbox_inches='tight', pad_inches=0, dpi=200)
+
+    # 在load_results_json函数的最后，调用上面的函数来绘制直方图
+    visualize_scores_distribution(unk_score_distribution_list)
+    
     print('loading total of {} boxes'.format(len(new_results_dict)))
-            
 
     return new_results_dict
 
@@ -973,7 +1021,7 @@ def _test_pred(results_path):
     selected_keys = list(results_dict.keys())[:]
     
     # 创建所需的文件夹
-    base_dir = '/home/hez4sgh/1_workspace/5_my_repo/OOD3D/work_dirs/owdetr3d_res101_gridmask_detr12_2_3cls_topk9_iou01_epoch6'
+    base_dir = 'visualization'
     folders = ['vis_result_gt_lidar', 'vis_result_gt_cam', 'vis_result_cam', 'vis_result_lidar']
     if not os.path.exists(base_dir):
         print(f"Base directory {base_dir} does not exist.")
@@ -993,15 +1041,16 @@ def _test_pred(results_path):
         
         selected_sample = nusc.get('sample', sample_token)
 
-        selected_lidar_token = selected_sample['data']['LIDAR_TOP']
-        selected_cam_token = selected_sample['data']['CAM_BACK_RIGHT']
+        # selected_lidar_token = selected_sample['data']['LIDAR_TOP']
         
-        gt_lidar_output_path = os.path.join(base_dir, f"vis_result_gt_lidar_{model_work_dir}/st_{sample_token}_ct_{selected_lidar_token}.png")
-        gt_cam_output_path = os.path.join(base_dir, f"vis_result_gt_cam_{model_work_dir}/st_{sample_token}_ct_{selected_cam_token}.png")
-        cam_output_path = os.path.join(base_dir, f"vis_result_cam_{model_work_dir}/st_{sample_token}_ct_{selected_cam_token}.png")
-        lidar_output_path = os.path.join(base_dir, f"vis_result_lidar_{model_work_dir}/st_{sample_token}_ct_{selected_lidar_token}_back_right.png")
-        cam_lidar_output_path = os.path.join(base_dir, f"vis_result_cam_lidar_{model_work_dir}/st_{sample_token}_ct_{selected_lidar_token}.png")
-        print(lidar_output_path)
+        # camera_list = ['CAM_BACK', 'CAM_BACK_LEFT', 'CAM_BACK_RIGHT', 'CAM_FRONT', 'CAM_FRONT_LEFT', 'CAM_FRONT_RIGHT']
+        # selected_cam_token = selected_sample['data']['CAM_BACK_RIGHT']
+        
+        # gt_lidar_output_path = os.path.join(base_dir, f"vis_result_gt_lidar_{model_work_dir}/st_{sample_token}_ct_{selected_lidar_token}.png")
+        # gt_cam_output_path = os.path.join(base_dir, f"vis_result_gt_cam_{model_work_dir}/st_{sample_token}_ct_{selected_cam_token}.png")
+        # cam_output_path = os.path.join(base_dir, f"vis_result_cam_{model_work_dir}/st_{sample_token}_ct_{selected_cam_token}.png")
+        # lidar_output_path = os.path.join(base_dir, f"vis_result_lidar_{model_work_dir}/st_{sample_token}_ct_{selected_lidar_token}_back_right.png")
+        cam_lidar_output_path = os.path.join(base_dir, f"vis_result_cam_lidar_{model_work_dir}/st_{sample_token}.png")
         
         # 图片输出：预测图 - gt图 - 预测 + gt图
         # nusc_exp.render_sample_pred(selected_cam_token, results_dict[sample_token], out_path=cam_output_path)
@@ -1016,9 +1065,9 @@ def _test_pred(results_path):
         # 图片 + LidarBev输出 
         lidar_boxes = results_dict[sample_token]
         cam_boxes = copy.deepcopy(results_dict[sample_token])
-        nusc_exp.render_sample_pred_and_data_cam_and_lidar(selected_cam_token, selected_lidar_token, cam_boxes, lidar_boxes, out_path=lidar_output_path)
+        nusc_exp.render_sample_pred_and_data_cam_and_lidar(selected_sample, cam_boxes, lidar_boxes, out_path=cam_lidar_output_path)
 
 if __name__ == '__main__':
     torch.multiprocessing.set_start_method('fork')
-    results_json = '/home/hez4sgh/1_workspace/5_my_repo/OOD3D/work_dirs/owdetr3d_res101_gridmask_detr12_2_3cls_topk9_iou01_epoch6/pts_bbox/results_nusc.json'
+    results_json = 'test/owbevformer_base_5cls_wo_bb/Sat_Sep_30_21_10_59_2023/pts_bbox/results_nusc.json'
     _test_pred(results_json)
