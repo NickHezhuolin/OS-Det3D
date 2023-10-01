@@ -1069,5 +1069,5 @@ def _test_pred(results_path):
 
 if __name__ == '__main__':
     torch.multiprocessing.set_start_method('fork')
-    results_json = 'test/owbevformer_base_5cls_wo_bb/Sat_Sep_30_21_10_59_2023/pts_bbox/results_nusc.json'
+    results_json = 'val/work_dirs/owbevformer_tiny_5cls_bevformer_tiny_epoch_unk_gt_0930/Sun_Oct__1_00_50_03_2023/pts_bbox/results_nusc.json'
     _test_pred(results_json)

@@ -23,14 +23,13 @@ voxel_size = [0.2, 0.2, 8]
 
 TRAIN_NUM_CLASSES = 5
 
-
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 
 # For nuScenes we usually do 10-class detection
 train_class_names = [
     'car', 'construction_vehicle', 'barrier',
-     'bicycle', 'pedestrian'
+     'bicycle', 'pedestrian',
 ]
 
 eval_class_names = [
@@ -184,7 +183,7 @@ model = dict(
             iou_cost=dict(type='IoUCost', weight=0.0), # Fake cost. This is just to make it compatible with DETR head.
             pc_range=point_cloud_range))))
 
-dataset_type = 'OWCustomNuScenesDataset5CLSRPN'
+dataset_type = 'OWCustomNuScenesDataset5ClS'
 data_root = 'data/nuscenes/'
 file_client_args = dict(backend='disk')
 
@@ -283,5 +282,5 @@ log_config = dict(
     ])
 
 checkpoint_config = dict(interval=1)
-load_from = 'ckpts/bevformer_tiny_epoch_18_5_cls.pth'
-work_dir = 'work_dirs/owbevformer_tiny_5cls_bevformer_tiny_epoch_test_0926'
+load_from = 'ckpts/bevformer_tiny_epoch_12_5_cls.pth'
+work_dir = 'work_dirs/owbevformer_tiny_5cls_bevformer_tiny_epoch_unk_gt_0930'
