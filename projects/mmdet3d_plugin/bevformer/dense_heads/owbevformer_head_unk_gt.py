@@ -271,7 +271,7 @@ class OWBEVFormerHead_UnkGT(DETRHead):
         # print('**************************************************************')
         # print(my_sample['data'])
         
-        # # sensor = ['CAM_FRONT', 'CAM_FRONT_RIGHT', 'CAM_BACK_RIGHT', 'CAM_BACK', 'CAM_BACK_LEFT', 'CAM_FRONT_LEFT', 'LIDAR_TOP']
+        # sensor = ['CAM_FRONT', 'CAM_FRONT_RIGHT', 'CAM_BACK_RIGHT', 'CAM_BACK', 'CAM_BACK_LEFT', 'CAM_FRONT_LEFT', 'LIDAR_TOP']
         # sensor = ['CAM_FRONT', 'LIDAR_TOP']
         # for ss in sensor:
         #     cam_data = nusc.get('sample_data', my_sample['data'][ss])

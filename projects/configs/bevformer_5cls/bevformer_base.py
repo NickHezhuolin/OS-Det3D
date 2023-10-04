@@ -37,8 +37,8 @@ _dim_ = 256
 _pos_dim_ = _dim_//2
 _ffn_dim_ = _dim_*2
 _num_levels_ = 4
-bev_h_ = 50
-bev_w_ = 50
+bev_h_ = 200
+bev_w_ = 200
 queue_length = 4 # each sequence contains `queue_length` frames.
 
 model = dict(

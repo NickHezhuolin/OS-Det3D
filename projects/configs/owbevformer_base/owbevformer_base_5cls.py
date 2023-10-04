@@ -55,7 +55,7 @@ model = dict(
         depth=101,
         num_stages=4,
         out_indices=(1, 2, 3),
-        frozen_stages=2,
+        frozen_stages=1,
         norm_cfg=dict(type='BN2d', requires_grad=False),
         norm_eval=True,
         style='caffe',
@@ -70,7 +70,7 @@ model = dict(
         num_outs=4,
         relu_before_extra_convs=True),
     pts_bbox_head=dict(
-        type='OWBEVFormerHeadV1RPNV1',
+        type='OWBEVFormerHeadV1',
         bev_h=bev_h_,
         bev_w=bev_w_,
         num_query=900,
@@ -178,7 +178,7 @@ model = dict(
             iou_cost=dict(type='IoUCost', weight=0.0), # Fake cost. This is just to make it compatible with DETR head.
             pc_range=point_cloud_range))))
 
-dataset_type = 'OWCustomNuScenesDataset5CLSRPN'
+dataset_type = 'OWCustomNuScenesDataset5CLS'
 data_root = 'data/nuscenes/'
 file_client_args = dict(backend='disk')
 
@@ -274,5 +274,5 @@ log_config = dict(
     ])
 
 checkpoint_config = dict(interval=1)
-work_dir = 'work_dirs/owbevformer_base_epoch_18_5_cls'
+work_dir = 'work_dirs/owbevformer_base_epoch_18_5_cls_1004_test'
 load_from = 'ckpts/bevformer_base_epoch_18_5_cls.pth'
