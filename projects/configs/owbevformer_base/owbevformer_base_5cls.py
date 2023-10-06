@@ -55,7 +55,7 @@ model = dict(
         depth=101,
         num_stages=4,
         out_indices=(1, 2, 3),
-        frozen_stages=1,
+        frozen_stages=2,
         norm_cfg=dict(type='BN2d', requires_grad=False),
         norm_eval=True,
         style='caffe',

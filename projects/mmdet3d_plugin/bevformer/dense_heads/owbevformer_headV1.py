@@ -697,9 +697,9 @@ class OWBEVFormerHeadV1(DETRHead):
                     rect = Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='g', facecolor='none')
                     ax.add_patch(rect)
                     
-                for box in unmatched_boxes_print:
+                for box in ow_boxes_print:
                     xmin, ymin, xmax, ymax = box
-                    rect = Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='r', facecolor='none')
+                    rect = Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='b', facecolor='none')
                     ax.add_patch(rect)
             else:
                 for box in unmatched_boxes_print:
