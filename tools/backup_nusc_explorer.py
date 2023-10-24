@@ -355,8 +355,8 @@ class NuScenesExplorerMars(NuScenesExplorer):
         if out_path is not None:
             plt.savefig(out_path, bbox_inches='tight', pad_inches=0, dpi=200)
 
-        if verbose:
-            plt.show()
+        # if verbose:
+            # plt.show()
         
     def render_sample_pred(self,
                            sample_data_token: str,
@@ -591,8 +591,8 @@ class NuScenesExplorerMars(NuScenesExplorer):
         if out_path is not None:
             plt.savefig(out_path, bbox_inches='tight', pad_inches=0, dpi=200)
 
-        if verbose:
-            plt.show()
+        # if verbose:
+        #     plt.show()
             
     def render_sample_pred_and_data_cam_and_lidar(self,
                                                     sample_data,
@@ -895,8 +895,8 @@ class NuScenesExplorerMars(NuScenesExplorer):
                 plt.savefig(out_path, bbox_inches='tight', pad_inches=0, dpi=200)
                 print(out_path)
                 
-            if verbose:
-                plt.show()
+            # if verbose:
+            #     plt.show()
                 
             plt.close()
 
@@ -1069,5 +1069,5 @@ def _test_pred(results_path):
 
 if __name__ == '__main__':
     torch.multiprocessing.set_start_method('fork')
-    results_json = 'val/work_dirs/owbevformer_tiny_5cls_bevformer_tiny_epoch_unk_gt_0930/Sun_Oct__1_00_50_03_2023/pts_bbox/results_nusc.json'
+    results_json = 'test/owbevformer_base_5cls_unk_gt/Mon_Oct_23_19_47_42_2023/pts_bbox/results_nusc.json'
     _test_pred(results_json)

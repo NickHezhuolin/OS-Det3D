@@ -42,8 +42,8 @@ _dim_ = 256
 _pos_dim_ = _dim_//2
 _ffn_dim_ = _dim_*2
 _num_levels_ = 4
-bev_h_ = 128
-bev_w_ = 128
+bev_h_ = 200
+bev_w_ = 200
 queue_length = 4 # each sequence contains `queue_length` frames.
 
 model = dict(
@@ -55,7 +55,7 @@ model = dict(
         depth=101,
         num_stages=4,
         out_indices=(1, 2, 3),
-        frozen_stages=2,
+        frozen_stages=1,
         norm_cfg=dict(type='BN2d', requires_grad=False),
         norm_eval=True,
         style='caffe',
@@ -274,5 +274,5 @@ log_config = dict(
     ])
 
 checkpoint_config = dict(interval=1)
-work_dir = 'work_dirs/owbevformer_base_5cls_bevformer_base_epoch_18_unk_gt_0930'
+work_dir = 'work_dirs/owbevformer_base_5cls_bevformer_base_epoch_18_unk_gt_1020'
 load_from = 'ckpts/bevformer_base_epoch_18_5_cls.pth'
