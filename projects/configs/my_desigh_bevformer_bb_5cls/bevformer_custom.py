@@ -37,9 +37,9 @@ _dim_ = 256
 _pos_dim_ = _dim_//2
 _ffn_dim_ = _dim_*2
 _num_levels_ = 4
-bev_h_ = 128
-bev_w_ = 128
-queue_length = 3 # each sequence contains `queue_length` frames.
+bev_h_ = 200
+bev_w_ = 200
+queue_length = 4 # each sequence contains `queue_length` frames.
 
 model = dict(
     type='BEVFormer',
@@ -50,7 +50,7 @@ model = dict(
         depth=101,
         num_stages=4,
         out_indices=(1, 2, 3),
-        frozen_stages=1,
+        frozen_stages=2,
         norm_cfg=dict(type='BN2d', requires_grad=False),
         norm_eval=True,
         style='caffe',
@@ -200,7 +200,7 @@ test_pipeline = [
 ]
 
 data = dict(
-    samples_per_gpu=3,
+    samples_per_gpu=1,
     workers_per_gpu=4,
     train=dict(
         type=dataset_type,
@@ -248,7 +248,7 @@ lr_config = dict(
     warmup_ratio=1.0 / 3,
     min_lr_ratio=1e-3)
 total_epochs = 24
-evaluation = dict(interval=1, pipeline=test_pipeline)
+evaluation = dict(interval=12, pipeline=test_pipeline)
 
 runner = dict(type='EpochBasedRunner', max_epochs=total_epochs)
 log_config = dict(
@@ -260,4 +260,4 @@ log_config = dict(
 
 checkpoint_config = dict(interval=1)
 load_from = 'ckpts/r101_dcn_fcos3d_pretrain.pth'
-work_dir = 'work_dirs/bevformer_costom_5cls'
+work_dir = 'work_dirs/bevformer_costom_5cls_1024'

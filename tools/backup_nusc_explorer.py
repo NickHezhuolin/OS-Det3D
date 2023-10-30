@@ -1011,7 +1011,7 @@ def _test():
     nusc_exp.render_sample(samples[0]['token'])
 
 
-def _test_pred(results_path):
+def _test_pred(results_path, base_dir):
     results_dict = load_results_json(results_path)
     nusc = NuScenesMars(version='v1.0-trainval', dataroot='data/nuscenes')
     nusc_exp = NuScenesExplorerMars(nusc)
@@ -1021,7 +1021,6 @@ def _test_pred(results_path):
     selected_keys = list(results_dict.keys())[:]
     
     # 创建所需的文件夹
-    base_dir = 'visualization'
     folders = ['vis_result_gt_lidar', 'vis_result_gt_cam', 'vis_result_cam', 'vis_result_lidar']
     if not os.path.exists(base_dir):
         print(f"Base directory {base_dir} does not exist.")
@@ -1069,5 +1068,6 @@ def _test_pred(results_path):
 
 if __name__ == '__main__':
     torch.multiprocessing.set_start_method('fork')
-    results_json = 'test/owbevformer_base_5cls_unk_gt/Mon_Oct_23_19_47_42_2023/pts_bbox/results_nusc.json'
-    _test_pred(results_json)
+    results_json = 'test/owbevformer_base_5cls_wo_bb/Fri_Oct_20_10_07_21_2023/pts_bbox/results_nusc.json'
+    base_dir = 'visualization/visualization_owbevformer_base_5cls_wo_bb'
+    _test_pred(results_json, base_dir)
