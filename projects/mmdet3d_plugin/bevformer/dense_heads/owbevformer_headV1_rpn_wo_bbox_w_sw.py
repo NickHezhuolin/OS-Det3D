@@ -18,7 +18,7 @@ import time
 from nuscenes.nuscenes import NuScenes
 
 @HEADS.register_module()
-class OWBEVFormerHeadV1RPNV1(DETRHead):
+class OWBEVFormerHeadV1RPNV1_with_soft_weight(DETRHead):
     """Head of Detr3D.
     Args:
         with_box_refine (bool): Whether to refine the reference points
@@ -77,7 +77,7 @@ class OWBEVFormerHeadV1RPNV1(DETRHead):
         self.real_w = self.pc_range[3] - self.pc_range[0]
         self.real_h = self.pc_range[4] - self.pc_range[1]
         self.num_cls_fcs = num_cls_fcs - 1
-        super(OWBEVFormerHeadV1RPNV1, self).__init__(
+        super(OWBEVFormerHeadV1RPNV1_with_soft_weight, self).__init__(
             *args, transformer=transformer, **kwargs)
         if loss_nc_cls is not None:
             self.loss_nc_cls = build_loss(loss_nc_cls)
@@ -725,7 +725,8 @@ class OWBEVFormerHeadV1RPNV1(DETRHead):
         #############################################
         
         # gt_label_list + owod_targets
-        owod_targets = proposal_bbox[topk_inds] 
+        owod_targets = proposal_bbox[topk_inds]
+
         owod_num = owod_targets.shape[0]
         original_labels_tensor = gt_labels_list[0].clone()
         original_labels_tensor_device = original_labels_tensor.device
@@ -738,7 +739,9 @@ class OWBEVFormerHeadV1RPNV1(DETRHead):
         ow_bbox_new_tensor = torch.cat((original_bboxes_tensor, owod_targets.to(original_bboxes_tensor_device)), dim=0)
         ow_gt_bboxes_list = [ow_bbox_new_tensor]
         
-        return ow_gt_labels_list, ow_gt_bboxes_list
+        ow_weight = all_proposal_bbox[topk_inds,9:].t()
+
+        return ow_gt_labels_list, ow_gt_bboxes_list, ow_weight
     
     def loss_single_owod(self,
                         cls_scores,
@@ -771,7 +774,7 @@ class OWBEVFormerHeadV1RPNV1(DETRHead):
         cls_scores_list = [cls_scores[i] for i in range(num_imgs)]
         bbox_preds_list = [bbox_preds[i] for i in range(num_imgs)]
         
-        ow_gt_labels_list, ow_gt_bboxes_list =  self.get_owod_target(cls_scores_list,
+        ow_gt_labels_list, ow_gt_bboxes_list , ow_weight =  self.get_owod_target(cls_scores_list,
                                     bev_heatmap_list, img_metas_list, gt_bboxes_list, gt_labels_list)
 
         cls_reg_targets = self.get_targets(cls_scores_list, bbox_preds_list,
@@ -789,7 +792,8 @@ class OWBEVFormerHeadV1RPNV1(DETRHead):
         bbox_targets = torch.cat(bbox_targets_list, 0)
         bbox_weights = torch.cat(bbox_weights_list, 0)
         
-        # without refine bbox
+        # with soft weight
+        label_weights[ow_match_labels_idx] = ow_weight
         bbox_weights[ow_match_labels_idx] = 0
         
         # nc_cls init
