@@ -55,7 +55,7 @@ model = dict(
         depth=101,
         num_stages=4,
         out_indices=(1, 2, 3),
-        frozen_stages=1,
+        frozen_stages=2,
         norm_cfg=dict(type='BN2d', requires_grad=False),
         norm_eval=True,
         style='caffe',
@@ -219,7 +219,7 @@ data = dict(
     train=dict(
         type=dataset_type,
         data_root=data_root,
-        ann_file=data_root + 'nuscenes_half_infos_temporal_train.pkl',
+        ann_file=data_root + 'nuscenes_infos_temporal_train.pkl',
         pipeline=train_pipeline,
         classes=train_class_names,
         modality=input_modality,
@@ -274,5 +274,5 @@ log_config = dict(
     ])
 
 checkpoint_config = dict(interval=1)
-work_dir = 'work_dirs/owbevformer_custom_epoch_18_5_cls_rpn_without_bbox_refine_1018_bev128_queue3'
+work_dir = 'work_dirs/owbevformer_custom_epoch_18_5_cls_rpn_without_bbox_refine_1105_all_data'
 load_from = 'ckpts/bevformer_base_epoch_18_5_cls.pth'

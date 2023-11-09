@@ -614,131 +614,134 @@ class OWBEVFormerHeadV1RPNV1(DETRHead):
             keep_indices = torch.nonzero(max_ious < 0.01).squeeze()
             
             unmatched_indices = unmatched_indices[keep_indices]
-        
+
         # 对 xy 同时做同倍增加，匹配扩增后的 bev
         xmin = (bb[unmatched_indices, 0] * 10).long()
         ymin = (bb[unmatched_indices, 1] * 10).long()
         xmax = (bb[unmatched_indices, 2] * 10).long()
         ymax = (bb[unmatched_indices, 3] * 10).long()
         
-        # 上采样bev_feature shape(200 x 200) 转换 到bev下
-        upsaple = nn.Upsample(size=(int(self.real_h*10),int(self.real_w*10)), mode='bilinear', align_corners=True) # 转到真实lidar尺寸 ( self.real_h*10 = 1024 x self.real_w*10 = 1024 )
-        bev_feat_up = upsaple(backbone_feature.unsqueeze(0)) # 1x1x1024x1024
-        bev_feat = bev_feat_up.squeeze(0).squeeze(0) # 1024x1024
-        
-        # 确保xy，最大最小值在bev_feat的范围内
-        scaled_boxes = (bb[unmatched_indices] * 10).long()
-        xmin, ymin, xmax, ymax = scaled_boxes.t()
-
-        # 切分img_feat
-        bev_feat_slices = [bev_feat[ymin[i]:ymax[i], xmin[i]:xmax[i]] for i in range(len(xmin))]
-
-        # 计算att均值得分
-        means_bb_slices = torch.tensor([torch.mean(slice) for slice in bev_feat_slices], device=unmatched_boxes.device)        
-        
-        mask = torch.isnan(means_bb_slices)
-        means_bb_slices[mask] = 10e10
-        
-        means_bb = torch.zeros(queries.shape[0]).to(unmatched_boxes)
-        means_bb[:] = 10e10
-        means_bb[unmatched_indices] = means_bb_slices
-
-        _, topk_inds = torch.topk(-means_bb, self.topk)
-        topk_inds = topk_inds.to(owod_device)
-        
-        #############################################
-        # # for vis result : bev_embed
-        # import seaborn as sns
-        # import matplotlib.pyplot as plt
-        # from matplotlib.patches import Rectangle
-        # import sys
-        # import os
-
-        # sample_idx = img_metas_list[0]['sample_idx']
-        
-        # visual_dir = f'visualization/{sample_idx}/'
-        # if not os.path.isdir(visual_dir):
-        #     os.makedirs(visual_dir)
+        if xmin.dim() != 0:
+            # 上采样bev_feature shape(200 x 200) 转换 到bev下
+            upsaple = nn.Upsample(size=(int(self.real_h*10),int(self.real_w*10)), mode='bilinear', align_corners=True) # 转到真实lidar尺寸 ( self.real_h*10 = 1024 x self.real_w*10 = 1024 )
+            bev_feat_up = upsaple(backbone_feature.unsqueeze(0)) # 1x1x1024x1024
+            bev_feat = bev_feat_up.squeeze(0).squeeze(0) # 1024x1024
             
-        # # 生成 gt 数据
-        # from nuscenes.nuscenes import NuScenes
-        # nusc = NuScenes(version='v1.0-trainval', dataroot='data/nuscenes', verbose=True)
-        # my_sample = nusc.get('sample', sample_idx)
-        
-        # # sensor = ['CAM_FRONT', 'CAM_FRONT_RIGHT', 'CAM_BACK_RIGHT', 'CAM_BACK', 'CAM_BACK_LEFT', 'CAM_FRONT_LEFT', 'LIDAR_TOP']
-        # sensor = ['CAM_FRONT', 'LIDAR_TOP']
-        # for ss in sensor:
-        #     cam_data = nusc.get('sample_data', my_sample['data'][ss])
-        #     file_name = f'{visual_dir}gt_{ss}.png' 
-        #     nusc.render_sample_data(cam_data['token'], out_path=file_name)
-        #     print(f"{file_name} Save successfully!")
-        
-        # #生成 bev_feat 可视化
-        # dense_heatmap_bev_queries_image = bev_feat # 1024x1024
-        # dense_image_bev_queries = dense_heatmap_bev_queries_image.cpu().clone()  # clone the tensor
-        # dense_image_bev_queries = dense_image_bev_queries.squeeze(0)  # remove the fake batch dimension
-        
-        # # query.shape = 假设900个 query box 均匀分布在 bev 空间中, 忽略 z 轴
-        # unmatched_boxes_print = (unmatched_boxes*10).long().cpu().detach().numpy() # (900, 4)
-        # gt_boxes_print = (gt_boxes_img*10).long().cpu().detach().numpy() # (gt_num, 4)
-        # ow_boxes_print = (unmatched_boxes[topk_inds]*10).long().cpu().detach().numpy()  # (3, 4)
-        # rpn_boxes_print = (unmatched_boxes[unmatched_indices]*10).long().cpu().detach().numpy()
-         
-        # for i in range(4): 
-        #     plt.figure()
-        #     fig_path = visual_dir + f'C_BEV_after_transformer_{i}.png'
-        #     ax = sns.heatmap(dense_image_bev_queries.detach().numpy())  # Added ax
+            # 确保xy，最大最小值在bev_feat的范围内
+            scaled_boxes = (bb[unmatched_indices] * 10).long()
+            xmin, ymin, xmax, ymax = scaled_boxes.t()
 
-        #     if i == 0:
-        #     # For each gt_box, draw a rectangle
-        #         for box in gt_boxes_print:
-        #             xmin, ymin, xmax, ymax = box
-        #             rect = Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='b', facecolor='none')
-        #             ax.add_patch(rect)
-        #     elif i == 1:
-        #     # For each ow_topk, draw a rectangle
-        #         for box in ow_boxes_print:
-        #             xmin, ymin, xmax, ymax = box
-        #             rect = Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='b', facecolor='none')
-        #             ax.add_patch(rect)
-        #     elif i == 2:
-        #     # For each rpn_after_iou, draw a rectangle
-        #         for box in rpn_boxes_print:
-        #             xmin, ymin, xmax, ymax = box
-        #             rect = Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='b', facecolor='none')
-        #             ax.add_patch(rect)
-        #     else:
-        #     # For each rpn_select, draw a rectangle
-        #         for box in unmatched_boxes_print:
-        #             xmin, ymin, xmax, ymax = box
-        #             rect = Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='b', facecolor='none')
-        #             ax.add_patch(rect)
+            # 切分img_feat
+            bev_feat_slices = [bev_feat[ymin[i]:ymax[i], xmin[i]:xmax[i]] for i in range(len(xmin))]
+
+            # 计算att均值得分
+            means_bb_slices = torch.tensor([torch.mean(slice) for slice in bev_feat_slices], device=unmatched_boxes.device)        
             
-        #     plt.gca().invert_yaxis()
-        #     plt.title('C_BEV_after_transformer')
-        #     hm = ax.get_figure()  # Modified this line as well
-        #     hm.savefig(fig_path, dpi=36*36)
-        #     plt.close()
-        #     print(f"{fig_path} Save successfully!")
+            mask = torch.isnan(means_bb_slices)
+            means_bb_slices[mask] = 10e10
+            
+            means_bb = torch.zeros(queries.shape[0]).to(unmatched_boxes)
+            means_bb[:] = 10e10
+            means_bb[unmatched_indices] = means_bb_slices
+
+            _, topk_inds = torch.topk(-means_bb, self.topk)
+            topk_inds = topk_inds.to(owod_device)
+            
+            #############################################
+            # # for vis result : bev_embed
+            # import seaborn as sns
+            # import matplotlib.pyplot as plt
+            # from matplotlib.patches import Rectangle
+            # import sys
+            # import os
+
+            # sample_idx = img_metas_list[0]['sample_idx']
+            
+            # visual_dir = f'visualization/{sample_idx}/'
+            # if not os.path.isdir(visual_dir):
+            #     os.makedirs(visual_dir)
+                
+            # # 生成 gt 数据
+            # from nuscenes.nuscenes import NuScenes
+            # nusc = NuScenes(version='v1.0-trainval', dataroot='data/nuscenes', verbose=True)
+            # my_sample = nusc.get('sample', sample_idx)
+            
+            # # sensor = ['CAM_FRONT', 'CAM_FRONT_RIGHT', 'CAM_BACK_RIGHT', 'CAM_BACK', 'CAM_BACK_LEFT', 'CAM_FRONT_LEFT', 'LIDAR_TOP']
+            # sensor = ['CAM_FRONT', 'LIDAR_TOP']
+            # for ss in sensor:
+            #     cam_data = nusc.get('sample_data', my_sample['data'][ss])
+            #     file_name = f'{visual_dir}gt_{ss}.png' 
+            #     nusc.render_sample_data(cam_data['token'], out_path=file_name)
+            #     print(f"{file_name} Save successfully!")
+            
+            # #生成 bev_feat 可视化
+            # dense_heatmap_bev_queries_image = bev_feat # 1024x1024
+            # dense_image_bev_queries = dense_heatmap_bev_queries_image.cpu().clone()  # clone the tensor
+            # dense_image_bev_queries = dense_image_bev_queries.squeeze(0)  # remove the fake batch dimension
+            
+            # # query.shape = 假设900个 query box 均匀分布在 bev 空间中, 忽略 z 轴
+            # unmatched_boxes_print = (unmatched_boxes*10).long().cpu().detach().numpy() # (900, 4)
+            # gt_boxes_print = (gt_boxes_img*10).long().cpu().detach().numpy() # (gt_num, 4)
+            # ow_boxes_print = (unmatched_boxes[topk_inds]*10).long().cpu().detach().numpy()  # (3, 4)
+            # rpn_boxes_print = (unmatched_boxes[unmatched_indices]*10).long().cpu().detach().numpy()
+            
+            # for i in range(4): 
+            #     plt.figure()
+            #     fig_path = visual_dir + f'C_BEV_after_transformer_{i}.png'
+            #     ax = sns.heatmap(dense_image_bev_queries.detach().numpy())  # Added ax
+
+            #     if i == 0:
+            #     # For each gt_box, draw a rectangle
+            #         for box in gt_boxes_print:
+            #             xmin, ymin, xmax, ymax = box
+            #             rect = Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='b', facecolor='none')
+            #             ax.add_patch(rect)
+            #     elif i == 1:
+            #     # For each ow_topk, draw a rectangle
+            #         for box in ow_boxes_print:
+            #             xmin, ymin, xmax, ymax = box
+            #             rect = Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='b', facecolor='none')
+            #             ax.add_patch(rect)
+            #     elif i == 2:
+            #     # For each rpn_after_iou, draw a rectangle
+            #         for box in rpn_boxes_print:
+            #             xmin, ymin, xmax, ymax = box
+            #             rect = Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='b', facecolor='none')
+            #             ax.add_patch(rect)
+            #     else:
+            #     # For each rpn_select, draw a rectangle
+            #         for box in unmatched_boxes_print:
+            #             xmin, ymin, xmax, ymax = box
+            #             rect = Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='b', facecolor='none')
+            #             ax.add_patch(rect)
+                
+            #     plt.gca().invert_yaxis()
+            #     plt.title('C_BEV_after_transformer')
+            #     hm = ax.get_figure()  # Modified this line as well
+            #     hm.savefig(fig_path, dpi=36*36)
+            #     plt.close()
+            #     print(f"{fig_path} Save successfully!")
+            
+            # pdb.set_trace()
+            #############################################
+            
+            # gt_label_list + owod_targets
+            owod_targets = proposal_bbox[topk_inds] 
+            owod_num = owod_targets.shape[0]
+            original_labels_tensor = gt_labels_list[0].clone()
+            original_labels_tensor_device = original_labels_tensor.device
+            ow_label = torch.full((owod_num,), cls_scores_list[0].shape[1] - 1).to(original_labels_tensor_device)
+            ow_label_new_tensor = torch.cat((original_labels_tensor, ow_label))
+            ow_gt_labels_list = [ow_label_new_tensor]
+            
+            original_bboxes_tensor = gt_bboxes_list[0].clone()
+            original_bboxes_tensor_device = original_bboxes_tensor.device
+            ow_bbox_new_tensor = torch.cat((original_bboxes_tensor, owod_targets.to(original_bboxes_tensor_device)), dim=0)
+            ow_gt_bboxes_list = [ow_bbox_new_tensor]
         
-        # pdb.set_trace()
-        #############################################
-        
-        # gt_label_list + owod_targets
-        owod_targets = proposal_bbox[topk_inds] 
-        owod_num = owod_targets.shape[0]
-        original_labels_tensor = gt_labels_list[0].clone()
-        original_labels_tensor_device = original_labels_tensor.device
-        ow_label = torch.full((owod_num,), cls_scores_list[0].shape[1] - 1).to(original_labels_tensor_device)
-        ow_label_new_tensor = torch.cat((original_labels_tensor, ow_label))
-        ow_gt_labels_list = [ow_label_new_tensor]
-        
-        original_bboxes_tensor = gt_bboxes_list[0].clone()
-        original_bboxes_tensor_device = original_bboxes_tensor.device
-        ow_bbox_new_tensor = torch.cat((original_bboxes_tensor, owod_targets.to(original_bboxes_tensor_device)), dim=0)
-        ow_gt_bboxes_list = [ow_bbox_new_tensor]
-        
-        return ow_gt_labels_list, ow_gt_bboxes_list
+            return ow_gt_labels_list, ow_gt_bboxes_list
+        else:
+            return gt_labels_list, gt_bboxes_list
     
     def loss_single_owod(self,
                         cls_scores,
