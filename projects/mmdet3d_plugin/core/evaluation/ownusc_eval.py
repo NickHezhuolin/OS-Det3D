@@ -210,33 +210,18 @@ def accumulate(gt_boxes: EvalBoxes,
 
             # Then interpolate based on the confidences. (Note reversing since np.interp needs increasing arrays)
             match_data[key] = np.interp(conf[::-1], match_data['conf'][::-1], tmp[::-1])[::-1]
-            
-    rec_vis = tp / float(npos)
-    import matplotlib.pyplot as plt
-    # Plotting the recall curve
-    plt.figure(figsize=(10, 6))
-    plt.plot(rec_vis, color='blue', label='Dist. : {}, Recall: {:.1f}, mAR: {:.1f}'.format(dist_th, max(rec_vis)*100, sum(rec_vis)/float(len(rec_vis)) * 100))
-    plt.xlabel('Sorted Predictions')
-    plt.ylabel('Recall')
-    plt.title(f'Recall of {class_name}_{dist_th}m')
-    plt.grid(True)
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(f'/home/hez4sgh/1_workspace/detr3d/work_dirs/mini/eval_ar/{class_name}_{dist_th}.png')
-    plt.close()
-    print(f'/home/hez4sgh/1_workspace/detr3d/work_dirs/mini/eval_ar/{class_name}_{dist_th}.png save successful!')
 
     # ---------------------------------------------
-    # Done. Instantiate MetricData and return
+    # Done. Instantiate MetricData and return. Not Finished.
     # ---------------------------------------------
-    return rec_vis, DetectionMetricData(recall=rec,
-                                        precision=prec,
-                                        confidence=conf,
-                                        trans_err=match_data['trans_err'],
-                                        vel_err=match_data['vel_err'],
-                                        scale_err=match_data['scale_err'],
-                                        orient_err=match_data['orient_err'],
-                                        attr_err=match_data['attr_err'])
+    return DetectionMetricData(recall=rec,
+                                precision=prec,
+                                confidence=conf,
+                                trans_err=match_data['trans_err'],
+                                vel_err=match_data['vel_err'],
+                                scale_err=match_data['scale_err'],
+                                orient_err=match_data['orient_err'],
+                                attr_err=match_data['attr_err'])
 
 def custom_category_to_detection_name(category_name: str) -> Optional[str]:
     """
