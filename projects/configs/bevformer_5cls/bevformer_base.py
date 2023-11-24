@@ -200,7 +200,7 @@ test_pipeline = [
 ]
 
 data = dict(
-    samples_per_gpu=2,
+    samples_per_gpu=1,
     workers_per_gpu=4,
     train=dict(
         type=dataset_type,
@@ -248,7 +248,7 @@ lr_config = dict(
     warmup_ratio=1.0 / 3,
     min_lr_ratio=1e-3)
 total_epochs = 24
-evaluation = dict(interval=12, pipeline=test_pipeline)
+evaluation = dict(interval=1, pipeline=test_pipeline)
 
 runner = dict(type='EpochBasedRunner', max_epochs=total_epochs)
 log_config = dict(
@@ -260,4 +260,4 @@ log_config = dict(
 
 checkpoint_config = dict(interval=1)
 load_from = 'ckpts/r101_dcn_fcos3d_pretrain.pth'
-work_dir = 'work_dirs/bevformer_base_5cls'
+work_dir = 'work_dirs/bevformer_base_5cls_1122'
