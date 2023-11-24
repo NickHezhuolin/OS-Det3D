@@ -741,7 +741,7 @@ class OWBEVFormerHeadV1RPNV1_with_soft_weight(DETRHead):
             ow_gt_bboxes_list = [ow_bbox_new_tensor]
             
             ow_weight = all_proposal_bbox[topk_inds,9:].t()
-            ow_weight = torch.sqrt(ow_weight)
+            # ow_weight = torch.sqrt(ow_weight)
             return ow_gt_labels_list, ow_gt_bboxes_list, ow_weight
         else:
             return gt_labels_list, gt_bboxes_list, 0

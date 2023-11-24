@@ -214,7 +214,7 @@ def accumulate(gt_boxes: EvalBoxes,
     # ---------------------------------------------
     # Done. Instantiate MetricData and return. Not Finished.
     # ---------------------------------------------
-    return DetectionMetricData(recall=rec,
+    return DetectionMetricData(recall=rec_interp,
                                 precision=prec,
                                 confidence=conf,
                                 trans_err=match_data['trans_err'],
@@ -314,9 +314,6 @@ def custom_load_gt(nusc: NuScenes, eval_split: str, box_cls, verbose: bool = Fal
         for sample_annotation_token in sample_annotation_tokens:
 
             sample_annotation = nusc.get('sample_annotation', sample_annotation_token)
-            category_name = sample_annotation['category_name']
-            if category_name in ['motorcycle', 'trailer']:
-                sample_annotation['category_name'] = 'unk_obj'
             if box_cls == DetectionBox:
                 # Get label name in detection task and filter unused labels.
                 detection_name = custom_category_to_detection_name(sample_annotation['category_name'])

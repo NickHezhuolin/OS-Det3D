@@ -39,8 +39,6 @@ def calc_tp(md: DetectionMetricData, min_recall: float, metric_name: str) -> flo
     first_ind = round(100 * min_recall) + 1  # +1 to exclude the error at min recall.
     last_ind = md.max_recall_ind  # First instance of confidence = 0 is index of max achieved recall.
     
-    
-    
     if last_ind < first_ind:
         print(1.0)
         return 1.0  # Assign 1 here. If this happens for all classes, the score for that TP metric will be 0.
@@ -666,7 +664,7 @@ class NuScenesEval(DetectionEval):
 
 if __name__ == "__main__":
 
-    result_path_ = 'test/owbevformer_base_5cls_wo_bb_with_soft_weight/Sun_Nov_19_03_11_24_2023/pts_bbox/results_nusc.json'
+    result_path_ = 'val/work_dirs/owbevformer_custom_epoch_18_5_cls_rpn_without_bbox_refine_with_soft_weight_rescale_1117/Mon_Nov_20_08_27_19_2023/pts_bbox/results_nusc.json'
     eval_set_ = 'val'
     dataroot_ = 'data/nuscenes/'
     version_ = 'v1.0-trainval'
@@ -674,7 +672,7 @@ if __name__ == "__main__":
     plot_examples_ = 1
     render_curves_ = 0
     verbose_ = 1
-    output_dir_ = 'test/owbevformer_base_5cls_wo_bb_with_soft_weight/Sun_Nov_19_03_11_24_2023/pts_bbox/'
+    output_dir_ = 'val/work_dirs/owbevformer_custom_epoch_18_5_cls_rpn_without_bbox_refine_with_soft_weight_rescale_1117/Mon_Nov_20_08_27_19_2023/pts_bbox/'
 
     if config_path == '':
         cfg_ = config_factory('detection_cvpr_2019')
