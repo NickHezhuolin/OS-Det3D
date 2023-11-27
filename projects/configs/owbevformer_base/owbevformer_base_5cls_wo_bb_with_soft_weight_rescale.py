@@ -70,12 +70,12 @@ model = dict(
         num_outs=4,
         relu_before_extra_convs=True),
     pts_bbox_head=dict(
-        type='OWBEVFormerHeadV1RPNV1_with_soft_weight',
+        type='OWBEVFormerHeadV1RPNV1_with_soft_weight_rescale',
         bev_h=bev_h_,
         bev_w=bev_w_,
         num_query=900,
         num_classes=TRAIN_NUM_CLASS+1,
-        topk=5,
+        topk=10,
         owod=True,
         owod_decoder_layer=6,
         in_channels=_dim_,
@@ -274,6 +274,9 @@ log_config = dict(
     ])
 
 checkpoint_config = dict(interval=1)
-
+<<<<<<< HEAD
 work_dir = 'work_dirs/owbevformer_custom_epoch_18_5_cls_rpn_without_bbox_refine_with_soft_weight_1123'
+=======
+work_dir = 'work_dirs/owbevformer_custom_epoch_18_5_cls_rpn_without_bbox_refine_with_soft_weight_rescale_topk5_1121_all_data_frozen_1'
+>>>>>>> 44a4b3950b7292c5114c98ee31ec47f05e9bf2b6
 load_from = 'ckpts/bevformer_base_epoch_18_5_cls.pth'

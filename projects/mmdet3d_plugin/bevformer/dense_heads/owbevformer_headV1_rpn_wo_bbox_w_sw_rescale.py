@@ -18,7 +18,7 @@ import time
 from nuscenes.nuscenes import NuScenes
 
 @HEADS.register_module()
-class OWBEVFormerHeadV1RPNV1_with_soft_weight(DETRHead):
+class OWBEVFormerHeadV1RPNV1_with_soft_weight_rescale(DETRHead):
     """Head of Detr3D.
     Args:
         with_box_refine (bool): Whether to refine the reference points
@@ -77,7 +77,7 @@ class OWBEVFormerHeadV1RPNV1_with_soft_weight(DETRHead):
         self.real_w = self.pc_range[3] - self.pc_range[0]
         self.real_h = self.pc_range[4] - self.pc_range[1]
         self.num_cls_fcs = num_cls_fcs - 1
-        super(OWBEVFormerHeadV1RPNV1_with_soft_weight, self).__init__(
+        super(OWBEVFormerHeadV1RPNV1_with_soft_weight_rescale, self).__init__(
             *args, transformer=transformer, **kwargs)
         if loss_nc_cls is not None:
             self.loss_nc_cls = build_loss(loss_nc_cls)

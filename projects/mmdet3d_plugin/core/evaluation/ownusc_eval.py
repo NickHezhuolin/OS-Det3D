@@ -444,6 +444,8 @@ class CustomDetectionEval:
         # Filter boxes (distance, points per box, etc.).
         if verbose:
             print('Filtering predictions')
+        cls_range_map = self.cfg.class_range
+        cls_range_map['unk_obj'] = 50
         self.pred_boxes = filter_eval_boxes(nusc, self.pred_boxes, self.cfg.class_range, verbose=verbose)
         if verbose:
             print('Filtering ground truth annotations')
