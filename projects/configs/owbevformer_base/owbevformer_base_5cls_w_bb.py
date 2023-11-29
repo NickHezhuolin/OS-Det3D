@@ -274,5 +274,5 @@ log_config = dict(
     ])
 
 checkpoint_config = dict(interval=1)
-work_dir = 'work_dirs/owbevformer_base_epoch_18_5_cls_rpn_without_bbox_refine_1127'
+work_dir = 'work_dirs/owbevformer_base_epoch_18_5_cls_rpn_with_bbox_refine_1128'
 load_from = 'ckpts/bevformer_base_epoch_18_5_cls.pth'

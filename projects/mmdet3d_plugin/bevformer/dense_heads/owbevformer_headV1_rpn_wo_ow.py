@@ -616,11 +616,11 @@ class OWBEVFormerHeadV1RPNV1_Without_OWDETR_Select(DETRHead):
             unmatched_indices = unmatched_indices[keep_indices]
         
         # # 对 xy 同时做同倍增加，匹配扩增后的 bev
-        # xmin = (bb[unmatched_indices, 0] * 10).long()
+        xmin = (bb[unmatched_indices, 0] * 10).long()
         # ymin = (bb[unmatched_indices, 1] * 10).long()
         # xmax = (bb[unmatched_indices, 2] * 10).long()
         # ymax = (bb[unmatched_indices, 3] * 10).long()
-        
+        if xmin.dim() != 0:
         # # 上采样bev_feature shape(200 x 200) 转换 到bev下
         # upsaple = nn.Upsample(size=(int(self.real_h*10),int(self.real_w*10)), mode='bilinear', align_corners=True) # 转到真实lidar尺寸 ( self.real_h*10 = 1024 x self.real_w*10 = 1024 )
         # bev_feat_up = upsaple(backbone_feature.unsqueeze(0)) # 1x1x1024x1024
@@ -725,20 +725,22 @@ class OWBEVFormerHeadV1RPNV1_Without_OWDETR_Select(DETRHead):
         #############################################
         
         # gt_label_list + owod_targets
-        owod_targets = proposal_bbox[unmatched_indices] 
-        owod_num = owod_targets.shape[0]
-        original_labels_tensor = gt_labels_list[0].clone()
-        original_labels_tensor_device = original_labels_tensor.device
-        ow_label = torch.full((owod_num,), cls_scores_list[0].shape[1] - 1).to(original_labels_tensor_device)
-        ow_label_new_tensor = torch.cat((original_labels_tensor, ow_label))
-        ow_gt_labels_list = [ow_label_new_tensor]
-        
-        original_bboxes_tensor = gt_bboxes_list[0].clone()
-        original_bboxes_tensor_device = original_bboxes_tensor.device
-        ow_bbox_new_tensor = torch.cat((original_bboxes_tensor, owod_targets.to(original_bboxes_tensor_device)), dim=0)
-        ow_gt_bboxes_list = [ow_bbox_new_tensor]
-        
-        return ow_gt_labels_list, ow_gt_bboxes_list
+            owod_targets = proposal_bbox[unmatched_indices] 
+            owod_num = owod_targets.shape[0]
+            original_labels_tensor = gt_labels_list[0].clone()
+            original_labels_tensor_device = original_labels_tensor.device
+            ow_label = torch.full((owod_num,), cls_scores_list[0].shape[1] - 1).to(original_labels_tensor_device)
+            ow_label_new_tensor = torch.cat((original_labels_tensor, ow_label))
+            ow_gt_labels_list = [ow_label_new_tensor]
+            
+            original_bboxes_tensor = gt_bboxes_list[0].clone()
+            original_bboxes_tensor_device = original_bboxes_tensor.device
+            ow_bbox_new_tensor = torch.cat((original_bboxes_tensor, owod_targets.to(original_bboxes_tensor_device)), dim=0)
+            ow_gt_bboxes_list = [ow_bbox_new_tensor]
+            
+            return ow_gt_labels_list, ow_gt_bboxes_list
+        else:
+            return gt_labels_list, gt_bboxes_list
     
     def loss_single_owod(self,
                         cls_scores,

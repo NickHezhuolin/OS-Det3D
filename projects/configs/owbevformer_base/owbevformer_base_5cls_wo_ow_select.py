@@ -219,7 +219,7 @@ data = dict(
     train=dict(
         type=dataset_type,
         data_root=data_root,
-        ann_file=data_root + 'nuscenes_half_infos_temporal_train.pkl',
+        ann_file=data_root + 'nuscenes_infos_temporal_train.pkl',
         pipeline=train_pipeline,
         classes=train_class_names,
         modality=input_modality,
@@ -274,5 +274,5 @@ log_config = dict(
     ])
 
 checkpoint_config = dict(interval=1)
-work_dir = 'work_dirs/owbevformer_base_5cls_bevformer_base_epoch_18_wo_ow_1031'
+work_dir = 'work_dirs/owbevformer_base_5cls_bevformer_base_epoch_18_wo_ow_1128'
 load_from = 'ckpts/bevformer_base_epoch_18_5_cls.pth'
