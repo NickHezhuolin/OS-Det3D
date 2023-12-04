@@ -18,7 +18,7 @@ import time
 from nuscenes.nuscenes import NuScenes
 
 @HEADS.register_module()
-class OWBEVFormerHeadV1RPNV1_without_nc_branch(DETRHead):
+class OWBEVFormerHeadV2(DETRHead):
     """Head of Detr3D.
     Args:
         with_box_refine (bool): Whether to refine the reference points
@@ -77,8 +77,10 @@ class OWBEVFormerHeadV1RPNV1_without_nc_branch(DETRHead):
         self.real_w = self.pc_range[3] - self.pc_range[0]
         self.real_h = self.pc_range[4] - self.pc_range[1]
         self.num_cls_fcs = num_cls_fcs - 1
-        super(OWBEVFormerHeadV1RPNV1_without_nc_branch, self).__init__(
+        super(OWBEVFormerHeadV2, self).__init__(
             *args, transformer=transformer, **kwargs)
+        if loss_nc_cls is not None:
+            self.loss_nc_cls = build_loss(loss_nc_cls)
         self.code_weights = nn.Parameter(torch.tensor(
             self.code_weights, requires_grad=False), requires_grad=False)
 
@@ -98,6 +100,16 @@ class OWBEVFormerHeadV1RPNV1_without_nc_branch(DETRHead):
             reg_branch.append(nn.ReLU())
         reg_branch.append(Linear(self.embed_dims, self.code_size))
         reg_branch = nn.Sequential(*reg_branch)
+        
+        # OWDetr3D - Done
+        if self.owod:
+            nc_cls_branch = []
+            for _ in range(self.num_reg_fcs):
+                nc_cls_branch.append(Linear(self.embed_dims, self.embed_dims))
+                nc_cls_branch.append(nn.LayerNorm(self.embed_dims))
+                nc_cls_branch.append(nn.ReLU(inplace=True))
+            nc_cls_branch.append(Linear(self.embed_dims, 3))  #  1 -> 3
+            nc_fc_cls = nn.Sequential(*nc_cls_branch)
 
         def _get_clones(module, N):
             return nn.ModuleList([copy.deepcopy(module) for i in range(N)])
@@ -110,11 +122,15 @@ class OWBEVFormerHeadV1RPNV1_without_nc_branch(DETRHead):
         if self.with_box_refine:
             self.cls_branches = _get_clones(fc_cls, num_pred)
             self.reg_branches = _get_clones(reg_branch, num_pred)
+            self.nc_cls_branches = _get_clones(nc_fc_cls, num_pred)
         else:
             self.cls_branches = nn.ModuleList(
                 [fc_cls for _ in range(num_pred)])
             self.reg_branches = nn.ModuleList(
                 [reg_branch for _ in range(num_pred)])
+            if self.owod:
+                self.nc_cls_branches = nn.ModuleList(
+                        [nc_fc_cls for _ in range(num_pred)])
 
         # OWOD目前不适用two-stage
         if not self.as_two_stage:
@@ -184,12 +200,14 @@ class OWBEVFormerHeadV1RPNV1_without_nc_branch(DETRHead):
                 img_metas=img_metas,
                 prev_bev=prev_bev
         )
+    
 
         bev_embed, hs, init_reference, inter_references = outputs
         
         hs = hs.permute(0, 2, 1, 3)
         outputs_classes = []
         outputs_coords = []
+        outputs_classes_nc = []
         
         for lvl in range(hs.shape[0]):
             if lvl == 0:
@@ -199,6 +217,9 @@ class OWBEVFormerHeadV1RPNV1_without_nc_branch(DETRHead):
             reference = inverse_sigmoid(reference)
             outputs_class = self.cls_branches[lvl](hs[lvl])
             tmp = self.reg_branches[lvl](hs[lvl])
+            
+            if self.owod:
+                outputs_class_nc = self.nc_cls_branches[lvl](hs[lvl])
 
             # TODO: check the shape of reference
             assert reference.shape[-1] == 3
@@ -217,9 +238,13 @@ class OWBEVFormerHeadV1RPNV1_without_nc_branch(DETRHead):
             outputs_coord = tmp
             outputs_classes.append(outputs_class)
             outputs_coords.append(outputs_coord)
+            if self.owod:
+                outputs_classes_nc.append(outputs_class_nc)
 
         outputs_classes = torch.stack(outputs_classes)
         outputs_coords = torch.stack(outputs_coords)
+        if self.owod:
+            outputs_classes_nc = torch.stack(outputs_classes_nc)
         
         #############################################
         # # for vis result : bev_embed
@@ -284,6 +309,7 @@ class OWBEVFormerHeadV1RPNV1_without_nc_branch(DETRHead):
                 'bev_embed': bev_embed,
                 'all_cls_scores': outputs_classes,
                 'all_bbox_preds': outputs_coords,
+                'all_nc_cls_scores': outputs_classes_nc,
                 'enc_cls_scores': None,
                 'enc_bbox_preds': None,
             }
@@ -517,16 +543,12 @@ class OWBEVFormerHeadV1RPNV1_without_nc_branch(DETRHead):
         # read from proposal_file
         proposal_file_name = img_metas_list[0]['proposal']
         with open(proposal_file_name, 'rb') as f:
-            try:
                 proposal = pickle.load(f)
-            except EOFError:
-                print(proposal_file_name)
-                return gt_labels_list, gt_bboxes_list
         
         # Lidar RPN proposal
         all_proposal_bbox = torch.stack(proposal, dim=0).to(owod_device)
         
-        # 使用这些索引来获取前50个proposal_bbox
+        # 使用这些索引来获取前30个proposal_bbox
         values = all_proposal_bbox[:, -1]
         sorted_indices = values.argsort(descending=True)
         rpn_select_num = gt_bboxes_list[0].shape[0] + 30
@@ -724,6 +746,7 @@ class OWBEVFormerHeadV1RPNV1_without_nc_branch(DETRHead):
     def loss_single_owod(self,
                         cls_scores,
                         bbox_preds,
+                        nc_cls_scores,
                         gt_bboxes_list,
                         gt_labels_list,
                         bev_heatmap_list,
@@ -771,6 +794,15 @@ class OWBEVFormerHeadV1RPNV1_without_nc_branch(DETRHead):
         
         # without refine bbox
         bbox_weights[ow_match_labels_idx] = 0
+        
+        # nc_cls init
+        nc_src_logits = nc_cls_scores.clone()
+        nc_idx = pos_inds_list[0].clone()
+        nc_target_classes_o = [torch.full_like(nc_idx,0)]
+        nc_target_classes = torch.full(nc_src_logits.shape[:2], 2, dtype=torch.int64, device=nc_src_logits.device) # class : 0-2
+        nc_target_classes[0][nc_idx] = nc_target_classes_o[0]
+        nc_labels = nc_target_classes[0]
+        nc_labels[ow_match_labels_idx] = 1
 
         # classification loss
         cls_scores = cls_scores.reshape(-1, self.cls_out_channels)
@@ -784,6 +816,19 @@ class OWBEVFormerHeadV1RPNV1_without_nc_branch(DETRHead):
 
         loss_cls = self.loss_cls(
             cls_scores, labels, label_weights, avg_factor=cls_avg_factor)
+
+        # Novelty classification loss
+        nc_cls_scores = nc_cls_scores.reshape(-1, 3)
+        # construct weighted avg_factor to match with the official DETR repo
+        nc_cls_avg_factor = num_total_pos * 1.0 + \
+            num_total_neg * self.bg_cls_weight
+        if self.sync_cls_avg_factor:
+            nc_cls_avg_factor = reduce_mean(
+                nc_cls_scores.new_tensor([nc_cls_avg_factor]))
+        nc_cls_avg_factor = max(nc_cls_avg_factor, 1)
+        
+        loss_nc = self.loss_nc_cls(
+                nc_cls_scores, nc_labels, label_weights, avg_factor=nc_cls_avg_factor)
         
         # Compute the average number of gt boxes accross all gpus, for
         bbox_pos_num = num_total_pos - self.topk
@@ -803,8 +848,9 @@ class OWBEVFormerHeadV1RPNV1_without_nc_branch(DETRHead):
         # all loss
         loss_cls = torch.nan_to_num(loss_cls)
         loss_bbox = torch.nan_to_num(loss_bbox)
+        loss_nc = torch.nan_to_num(loss_nc)
         
-        return loss_cls, loss_bbox
+        return loss_cls, loss_bbox, loss_nc
 
     @force_fp32(apply_to=('preds_dicts'))
     def loss(self,
@@ -861,6 +907,8 @@ class OWBEVFormerHeadV1RPNV1_without_nc_branch(DETRHead):
             dense_heatmap_bev = torch.mean(bev_heatmap.detach().permute(1, 2, 0).view(all_bbox_preds.shape[1], bev_heatmap.shape[2], self.bev_h, self.bev_w), dim=1) # b x bev_h x bev_w  均值bev
             bev_heatmap_list = [ dense_heatmap_bev for _ in range(num_dec_layers) ] # 6 x b x channel x bev_h x bev_w
             img_metas_list = [ img_metas for _ in range(num_dec_layers)] # 6
+            if preds_dicts['all_nc_cls_scores'] is not None:
+                all_nc_cls_scores = preds_dicts['all_nc_cls_scores']
 
         all_gt_bboxes_list = [gt_bboxes_list for _ in range(num_dec_layers)] # 6 x b x gt_num x 9
         all_gt_labels_list = [gt_labels_list for _ in range(num_dec_layers)] # 6 x b x 7
@@ -869,8 +917,8 @@ class OWBEVFormerHeadV1RPNV1_without_nc_branch(DETRHead):
         ]
 
         if self.owod:        
-            losses_cls, losses_bbox = multi_apply(
-                self.loss_single_owod, all_cls_scores, all_bbox_preds,
+            losses_cls, losses_bbox, losses_owod = multi_apply(
+                self.loss_single_owod, all_cls_scores, all_bbox_preds, all_nc_cls_scores,
                 all_gt_bboxes_list, all_gt_labels_list,
                 bev_heatmap_list, img_metas_list,
                 all_gt_bboxes_ignore_list)
@@ -896,13 +944,19 @@ class OWBEVFormerHeadV1RPNV1_without_nc_branch(DETRHead):
         # loss from the last decoder layer
         loss_dict['loss_cls'] = losses_cls[-1]
         loss_dict['loss_bbox'] = losses_bbox[-1]
+        
+        if self.owod:
+            loss_dict['loss_owod'] = losses_owod[-1]
 
         # loss from other decoder layers
         num_dec_layer = 0
-        for loss_cls_i, loss_bbox_i in zip(losses_cls[:-1],
-                                           losses_bbox[:-1]):
+        for loss_cls_i, loss_bbox_i, loss_owod_i in zip(losses_cls[:-1],
+                                           losses_bbox[:-1],
+                                           losses_owod[:-1]):
             loss_dict[f'd{num_dec_layer}.loss_cls'] = loss_cls_i
             loss_dict[f'd{num_dec_layer}.loss_bbox'] = loss_bbox_i
+            if self.owod:
+                loss_dict[f'd{num_dec_layer}.loss_owod'] = loss_owod_i
             num_dec_layer += 1
         return loss_dict
 
