@@ -11,17 +11,7 @@ plugin_dir = 'projects/mmdet3d_plugin/'
 point_cloud_range = [-51.2, -51.2, -5.0, 51.2, 51.2, 3.0]
 voxel_size = [0.2, 0.2, 8]
 
-TRAIN_NUM_CLASS = 5
-
-train_class_names = [
-    'car', 'construction_vehicle', 'barrier',
-    'bicycle', 'pedestrian'
-]
-
-eval_class_names = [
-    'car', 'construction_vehicle', 'barrier',
-    'bicycle', 'pedestrian', 'unk_obj'
-]
+NUM_CLASS=5
 
 img_norm_cfg = dict(
     mean=[103.530, 116.280, 123.675], std=[1.0, 1.0, 1.0], to_rgb=False)
@@ -30,6 +20,10 @@ img_norm_cfg = dict(
 #     'car', 'truck', 'construction_vehicle', 'bus', 'trailer', 'barrier',
 #     'motorcycle', 'bicycle', 'pedestrian', 'traffic_cone'
 # ]
+
+class_names = [
+    'car', 'truck', 'barrier', 'bicycle', 'pedestrian'
+]
 
 input_modality = dict(
     use_lidar=False,
@@ -70,14 +64,11 @@ model = dict(
         num_outs=4,
         relu_before_extra_convs=True),
     pts_bbox_head=dict(
-        type='OWBEVFormerHeadV1RPNV1_Without_OWDETR_Select',
+        type='BEVFormerHead',
         bev_h=bev_h_,
         bev_w=bev_w_,
         num_query=900,
-        num_classes=TRAIN_NUM_CLASS+1,
-        topk=10,
-        owod=True,
-        owod_decoder_layer=6,
+        num_classes=NUM_CLASS,
         in_channels=_dim_,
         sync_cls_avg_factor=True,
         with_box_refine=True,
@@ -144,7 +135,7 @@ model = dict(
             pc_range=point_cloud_range,
             max_num=300,
             voxel_size=voxel_size,
-            num_classes=TRAIN_NUM_CLASS+1),
+            num_classes=NUM_CLASS),
         positional_encoding=dict(
             type='LearnedPositionalEncoding',
             num_feats=_pos_dim_,
@@ -158,12 +149,6 @@ model = dict(
             alpha=0.25,
             loss_weight=2.0),
         loss_bbox=dict(type='L1Loss', loss_weight=0.25),
-        loss_nc_cls=dict(
-            type='FocalLoss',
-            use_sigmoid=True,
-            gamma=2.0,
-            alpha=0.25,
-            loss_weight=0.2),
         loss_iou=dict(type='GIoULoss', loss_weight=0.0)),
     # model training and testing settings
     train_cfg=dict(pts=dict(
@@ -178,7 +163,7 @@ model = dict(
             iou_cost=dict(type='IoUCost', weight=0.0), # Fake cost. This is just to make it compatible with DETR head.
             pc_range=point_cloud_range))))
 
-dataset_type = 'OWCustomNuScenesDataset5CLSRPN'
+dataset_type = 'CustomNuScenesDataset5clsV2'
 data_root = 'data/nuscenes/'
 file_client_args = dict(backend='disk')
 
@@ -188,10 +173,10 @@ train_pipeline = [
     dict(type='PhotoMetricDistortionMultiViewImage'),
     dict(type='LoadAnnotations3D', with_bbox_3d=True, with_label_3d=True, with_attr_label=False),
     dict(type='ObjectRangeFilter', point_cloud_range=point_cloud_range),
-    dict(type='ObjectNameFilter', classes=train_class_names),
+    dict(type='ObjectNameFilter', classes=class_names),
     dict(type='NormalizeMultiviewImage', **img_norm_cfg),
     dict(type='PadMultiViewImage', size_divisor=32),
-    dict(type='DefaultFormatBundle3D', class_names=train_class_names),
+    dict(type='DefaultFormatBundle3D', class_names=class_names),
     dict(type='CustomCollect3D', keys=['gt_bboxes_3d', 'gt_labels_3d', 'img'])
 ]
 
@@ -207,7 +192,7 @@ test_pipeline = [
         transforms=[
             dict(
                 type='DefaultFormatBundle3D',
-                class_names=eval_class_names,
+                class_names=class_names,
                 with_label=False),
             dict(type='CustomCollect3D', keys=['img'])
         ])
@@ -221,7 +206,7 @@ data = dict(
         data_root=data_root,
         ann_file=data_root + 'nuscenes_infos_temporal_train.pkl',
         pipeline=train_pipeline,
-        classes=train_class_names,
+        classes=class_names,
         modality=input_modality,
         test_mode=False,
         use_valid_flag=True,
@@ -234,12 +219,12 @@ data = dict(
              data_root=data_root,
              ann_file=data_root + 'nuscenes_infos_temporal_val.pkl',
              pipeline=test_pipeline,  bev_size=(bev_h_, bev_w_),
-             classes=eval_class_names, modality=input_modality, samples_per_gpu=1),
+             classes=class_names, modality=input_modality, samples_per_gpu=1),
     test=dict(type=dataset_type,
               data_root=data_root,
               ann_file=data_root + 'nuscenes_infos_temporal_val.pkl',
               pipeline=test_pipeline, bev_size=(bev_h_, bev_w_),
-              classes=eval_class_names, modality=input_modality),
+              classes=class_names, modality=input_modality),
     shuffler_sampler=dict(type='DistributedGroupSampler'),
     nonshuffler_sampler=dict(type='DistributedSampler')
 )
@@ -261,11 +246,10 @@ lr_config = dict(
     warmup_iters=500,
     warmup_ratio=1.0 / 3,
     min_lr_ratio=1e-3)
-total_epochs = 6
-evaluation = dict(interval=6, pipeline=test_pipeline)
+total_epochs = 24
+evaluation = dict(interval=1, pipeline=test_pipeline)
 
 runner = dict(type='EpochBasedRunner', max_epochs=total_epochs)
-
 log_config = dict(
     interval=50,
     hooks=[
@@ -274,5 +258,5 @@ log_config = dict(
     ])
 
 checkpoint_config = dict(interval=1)
-work_dir = 'work_dirs/owbevformer_base_5cls_bevformer_base_epoch_18_wo_ow_1205'
-load_from = 'ckpts/bevformer_base_epoch_18_5_cls.pth'
+load_from = 'ckpts/r101_dcn_fcos3d_pretrain.pth'
+work_dir = 'work_dirs/bevformer_base_5cls_1209_cv2truck'

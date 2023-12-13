@@ -236,7 +236,7 @@ def custom_category_to_detection_name(category_name: str) -> Optional[str]:
         # 'vehicle.bus.bendy': 'bus',
         # 'vehicle.bus.rigid': 'bus',
         'vehicle.car': 'car',
-        'vehicle.construction': 'construction_vehicle',
+        # 'vehicle.construction': 'construction_vehicle',
         # 'vehicle.motorcycle': 'motorcycle',
         'human.pedestrian.adult': 'pedestrian',
         'human.pedestrian.child': 'pedestrian',
@@ -244,7 +244,7 @@ def custom_category_to_detection_name(category_name: str) -> Optional[str]:
         'human.pedestrian.police_officer': 'pedestrian',
         # 'movable_object.trafficcone': 'traffic_cone',
         # 'vehicle.trailer': 'trailer',
-        # 'vehicle.truck': 'truck'
+        'vehicle.truck': 'truck'
     }
 
     if category_name in detection_mapping:

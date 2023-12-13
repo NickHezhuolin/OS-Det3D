@@ -551,8 +551,8 @@ class OWBEVFormerHeadV1RPNV1_Without_OWDETR_Select(DETRHead):
         # 使用这些索引来获取proposal_bbox
         values = all_proposal_bbox[:, -1]
         sorted_indices = values.argsort(descending=True)
-        rpn_select_num = gt_bboxes_list[0].shape[0] + 30
-        proposal_bbox = all_proposal_bbox[sorted_indices[:rpn_select_num]]
+        # rpn_select_num = gt_bboxes_list[0].shape[0] + 30
+        proposal_bbox = all_proposal_bbox[sorted_indices[:]]
         proposal_bbox = proposal_bbox[:,:9]
         
         queries = torch.arange(proposal_bbox.shape[0])
