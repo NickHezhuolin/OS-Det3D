@@ -43,12 +43,6 @@ class OWBEVFormerHeadV1RPNV1_with_soft_weight_without_nc_branch(DETRHead):
                  topk=3, # owod parm
                  owod=False, # owod parm
                  owod_decoder_layer=6, # owod parm
-                 loss_nc_cls=dict(
-                                 type='FocalLoss',
-                                 use_sigmoid=True,
-                                 gamma=2.0,
-                                 alpha=0.25,
-                                 loss_weight=2.0),
                  **kwargs):
 
         self.bev_h = bev_h
@@ -722,7 +716,6 @@ class OWBEVFormerHeadV1RPNV1_with_soft_weight_without_nc_branch(DETRHead):
     def loss_single_owod(self,
                         cls_scores,
                         bbox_preds,
-                        nc_cls_scores,
                         gt_bboxes_list,
                         gt_labels_list,
                         bev_heatmap_list,
