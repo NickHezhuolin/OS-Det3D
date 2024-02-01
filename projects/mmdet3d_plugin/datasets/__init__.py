@@ -4,6 +4,7 @@ from .ow5cls_nuscenes_dataset import OWCustomNuScenesDataset5CLS
 from .ow5cls_nuscenes_dataset_v2 import OWCustomNuScenesDataset5CLS_V2
 from .ow5cls_nuscenes_dataset_unk_gt import OWCustomNuScenesDatasetUnkGT
 from .ow5cls_nuscenes_dataset_rpn import OWCustomNuScenesDataset5CLSRPN
+from .ow5cls_nuscenes_dataset_obj_rpn import OWCustomNuScenesDataset5CLSOBJRPN
 from .builder import custom_build_dataset
 
 __all__ = [
@@ -11,5 +12,5 @@ __all__ = [
     'CustomNuScenesDatasetV2',
     'OWCustomNuScenesDataset5CLS', 'OWCustomNuScenesDataset5CLS_V2', 
     'OWCustomNuScenesDatasetUnkGT',
-    'OWCustomNuScenesDataset5CLSRPN',
+    'OWCustomNuScenesDataset5CLSRPN','OWCustomNuScenesDataset5CLSOBJRPN',
 ]

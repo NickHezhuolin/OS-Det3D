@@ -390,23 +390,6 @@ def accumulate(gt_boxes: EvalBoxes,
     
     print(f'{class_name}_{dist_th}m Recall: {RECALL:.1f}, AR: {AR:.1f}')
             
-    # rec_vis = tp / float(npos) 
-    # import matplotlib.pyplot as plt
-    # # Plotting the recall curve
-    # plt.figure(figsize=(10, 6))
-    # plt.plot(rec_vis, color='blue', label='Dist. : {}, Recall: {:.1f}, AR: {:.1f}'.format(dist_th, max(rec_vis)*100, sum(rec_vis)/float(len(rec_vis)) * 100))
-    # plt.xlabel('Sorted Predictions')
-    # plt.ylabel('Recall')
-    # plt.title(f'Recall of {class_name}_{dist_th}m')
-    # plt.grid(True)
-    # plt.legend()
-    # plt.tight_layout()
-    # plt.savefig(f'/home/hez4sgh/1_workspace/5_my_repo/OOD3D/eval/owdetr3d_res101_gridmask_detr12_2_3cls_topk9_iou01_epoch6/eval_ar/{class_name}_{dist_th}.png')
-    # plt.close()
-    # print(f'/home/hez4sgh/1_workspace/5_my_repo/OOD3D/eval/owdetr3d_res101_gridmask_detr12_2_3cls_topk9_iou01_epoch6/eval_ar/{class_name}_{dist_th}.png save done!')
-    # ---------------------------------------------
-    # Done. Instantiate MetricData and return
-    # ---------------------------------------------
     return DetectionMetricData(recall=rec_interp,
                                precision=prec,
                                confidence=conf,
@@ -665,7 +648,7 @@ class NuScenesEval(DetectionEval):
 if __name__ == "__main__":
 
 
-    result_path_ = 'val/work_dirs/owbevformer_base_epoch_18_5_cls_rpn_with_bbox_refine_1128/Wed_Nov_29_21_44_59_2023/pts_bbox/results_nusc.json'
+    result_path_ = 'test/owbevformer_base_5cls_wo_bb_without_nc_branch_w_sw_obj_rpn_down_threshold/Mon_Jan_29_05_27_13_2024/pts_bbox/results_nusc.json'
     eval_set_ = 'val'
     dataroot_ = 'data/nuscenes/'
     version_ = 'v1.0-trainval'
@@ -673,7 +656,7 @@ if __name__ == "__main__":
     plot_examples_ = 1
     render_curves_ = 0
     verbose_ = 1
-    output_dir_ = 'val/work_dirs/owbevformer_base_epoch_18_5_cls_rpn_with_bbox_refine_1128/Wed_Nov_29_21_44_59_2023/pts_bbox/'
+    output_dir_ = 'test/owbevformer_base_5cls_wo_bb_without_nc_branch_w_sw_obj_rpn_down_threshold/Mon_Jan_29_05_27_13_2024/pts_bbox/'
 
     if config_path == '':
         cfg_ = config_factory('detection_cvpr_2019')
