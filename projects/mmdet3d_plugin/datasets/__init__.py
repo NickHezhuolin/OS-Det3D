@@ -8,8 +8,9 @@ from .ow5cls_nuscenes_dataset_obj_rpn import OWCustomNuScenesDataset5CLSOBJRPN
 from .builder import custom_build_dataset
 
 __all__ = [
-    'CustomNuScenesDataset', 'CustomNuScenesDataset5cls',
+    'CustomNuScenesDataset', 'CustomNuScenesDataset5cls', 'CustomNuScenesDataset3cls',
     'CustomNuScenesDatasetV2',
+    'OWCustomNuScenesDataset3CLS',
     'OWCustomNuScenesDataset5CLS', 'OWCustomNuScenesDataset5CLS_V2', 
     'OWCustomNuScenesDatasetUnkGT',
     'OWCustomNuScenesDataset5CLSRPN','OWCustomNuScenesDataset5CLSOBJRPN',
