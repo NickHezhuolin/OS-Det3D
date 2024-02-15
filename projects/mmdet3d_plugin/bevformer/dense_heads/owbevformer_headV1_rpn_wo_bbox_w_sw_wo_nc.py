@@ -523,6 +523,18 @@ class OWBEVFormerHeadV1RPNV1_with_soft_weight_without_nc_branch(DETRHead):
         proposal_bbox = all_proposal_bbox[sorted_indices[:rpn_select_num]]
         proposal_bbox = proposal_bbox[:,:9]
         
+        pdb.set_trace()
+        # 获取从lidarRPN中拿到的proposal
+        base_dir = 'data/lidar_obj_rpn_select_result'
+        if not os.path.exists(base_dir):
+             os.makedirs(base_dir, exist_ok=True)
+        save_proposal_file_name = proposal_file_name.split('/')[-1]
+        save_proposal_path = os.path.join(base_dir, save_proposal_file_name)
+        with open(save_proposal_path, 'wb') as f:
+            pickle.dump(proposal_bbox, f)
+        
+        pdb.set_trace()
+        
         queries = torch.arange(proposal_bbox.shape[0])
         querie_box = queries.clone().to(owod_device)
         unmatched_indices = querie_box
