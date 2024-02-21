@@ -17,6 +17,8 @@ import pdb
 import time
 from nuscenes.nuscenes import NuScenes
 
+import os
+
 @HEADS.register_module()
 class OWBEVFormerHeadV1RPNV1_with_soft_weight_without_nc_branch(DETRHead):
     """Head of Detr3D.
@@ -523,17 +525,12 @@ class OWBEVFormerHeadV1RPNV1_with_soft_weight_without_nc_branch(DETRHead):
         proposal_bbox = all_proposal_bbox[sorted_indices[:rpn_select_num]]
         proposal_bbox = proposal_bbox[:,:9]
         
-        pdb.set_trace()
         # 获取从lidarRPN中拿到的proposal
-        base_dir = 'data/lidar_obj_rpn_select_result'
-        if not os.path.exists(base_dir):
-             os.makedirs(base_dir, exist_ok=True)
-        save_proposal_file_name = proposal_file_name.split('/')[-1]
-        save_proposal_path = os.path.join(base_dir, save_proposal_file_name)
-        with open(save_proposal_path, 'wb') as f:
-            pickle.dump(proposal_bbox, f)
-        
-        pdb.set_trace()
+        # base_dir = '/home/hez4sgh/test_data/lidar_obj_rpn_select_result'
+        # save_proposal_file_name = proposal_file_name.split('/')[-1]
+        # save_proposal_path = os.path.join(base_dir, save_proposal_file_name)
+        # with open(save_proposal_path, 'wb') as f:
+        #     pickle.dump(proposal_bbox, f)
         
         queries = torch.arange(proposal_bbox.shape[0])
         querie_box = queries.clone().to(owod_device)
@@ -721,6 +718,14 @@ class OWBEVFormerHeadV1RPNV1_with_soft_weight_without_nc_branch(DETRHead):
             ow_gt_bboxes_list = [ow_bbox_new_tensor]
             
             ow_weight = all_proposal_bbox[topk_inds,9:].t()
+            
+            # # 获取从lidarRPN中拿到的proposal
+            # owod_targets_dir = '/home/hez4sgh/test_data/owod_targets_result'
+            # owod_targets_file_name = proposal_file_name.split('/')[-1]
+            # owod_targets_path = os.path.join(owod_targets_dir, owod_targets_file_name)
+            # with open(owod_targets_path, 'wb') as f:
+            #     pickle.dump(owod_targets, f)
+            
             return ow_gt_labels_list, ow_gt_bboxes_list, ow_weight
         else:
             return gt_labels_list, gt_bboxes_list, 0
@@ -763,6 +768,13 @@ class OWBEVFormerHeadV1RPNV1_with_soft_weight_without_nc_branch(DETRHead):
         
         (labels_list, label_weights_list, bbox_targets_list, bbox_weights_list, targets_indices,
          num_total_pos, num_total_neg, pos_inds_list) = cls_reg_targets
+        
+        # proposal_file_name = img_metas_list[0]['proposal']
+        # bbox_targets_list_dir = '/home/hez4sgh/test_data/bbox_targets_list_result'
+        # bbox_targets_list_file_name = proposal_file_name.split('/')[-1]
+        # bbox_targets_list_file_name_path = os.path.join(bbox_targets_list_dir, bbox_targets_list_file_name)
+        # with open(bbox_targets_list_file_name_path, 'wb') as f:
+        #     pickle.dump(bbox_targets_list, f)
         
         ow_match_labels = labels_list[0][pos_inds_list[0]].clone()
         ow_match_labels_idx = pos_inds_list[0][ow_match_labels == (self.num_classes-1)]
