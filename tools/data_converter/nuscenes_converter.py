@@ -105,11 +105,11 @@ def create_nuscenes_infos(root_path,
             len(train_nusc_infos), len(val_nusc_infos)))
         data = dict(infos=train_nusc_infos, metadata=metadata)
         info_path = osp.join(out_path,
-                             '{}_infos_temporal_train.pkl'.format(info_prefix))
+                             '{}_task2_infos_temporal_train.pkl'.format(info_prefix))
         mmcv.dump(data, info_path)
         data['infos'] = val_nusc_infos
         info_val_path = osp.join(out_path,
-                                 '{}_infos_temporal_val.pkl'.format(info_prefix))
+                                 '{}_task2_infos_temporal_val.pkl'.format(info_prefix))
         mmcv.dump(data, info_val_path)
 
 
@@ -299,6 +299,10 @@ def _fill_trainval_infos(nusc,
                 if names[i] in NuScenesDataset.NameMapping:
                     names[i] = NuScenesDataset.NameMapping[names[i]]
             names = np.array(names)
+            
+            if all(item not in names for item in ['truck', 'bus', 'motorcycle']):
+                continue
+    
             # we need to convert rot to SECOND format.
             gt_boxes = np.concatenate([locs, dims, -rots - np.pi / 2], axis=1)
             assert len(gt_boxes) == len(
