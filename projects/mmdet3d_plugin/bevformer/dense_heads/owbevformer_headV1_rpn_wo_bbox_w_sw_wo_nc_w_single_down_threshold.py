@@ -42,7 +42,6 @@ class OWBEVFormerHeadV1RPNV1_with_soft_weight_without_nc_branch_with_single_down
                  bev_w=30,
                  topk=3, # owod parm
                  owod=False, # owod parm
-                 owod_decoder_layer=6, # owod parm
                  **kwargs):
 
         self.bev_h = bev_h

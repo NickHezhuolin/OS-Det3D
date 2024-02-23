@@ -14,13 +14,11 @@ voxel_size = [0.2, 0.2, 8]
 TRAIN_NUM_CLASS = 5
 
 train_class_names = [
-    'car', 'construction_vehicle', 'barrier',
-    'bicycle', 'pedestrian', 'truck', 'trailer', 'bus', 'motorcycle', 'traffic_cone'
+    'unk_obj', 'car', 'construction_vehicle', 'barrier', 'bicycle', 'pedestrian', 'truck', 'trailer', 'bus', 'motorcycle', 'traffic_cone'
 ]
 
 eval_class_names = [
-    'car', 'construction_vehicle', 'barrier',
-    'bicycle', 'pedestrian', 'unk_obj'
+    'unk_obj', 'car', 'construction_vehicle', 'barrier', 'bicycle', 'pedestrian''
 ]
 
 img_norm_cfg = dict(
@@ -55,7 +53,7 @@ model = dict(
         depth=101,
         num_stages=4,
         out_indices=(1, 2, 3),
-        frozen_stages=1,
+        frozen_stages=2,
         norm_cfg=dict(type='BN2d', requires_grad=False),
         norm_eval=True,
         style='caffe',
@@ -76,7 +74,6 @@ model = dict(
         num_query=900,
         num_classes=TRAIN_NUM_CLASS+1,
         topk=10,
-        owod=True,
         owod_decoder_layer=6,
         in_channels=_dim_,
         sync_cls_avg_factor=True,
@@ -178,7 +175,7 @@ model = dict(
             iou_cost=dict(type='IoUCost', weight=0.0), # Fake cost. This is just to make it compatible with DETR head.
             pc_range=point_cloud_range))))
 
-dataset_type = 'OWCustomNuScenesDatasetUnkGT'
+dataset_type = 'OWCustomNuScenesDatasetUnkGT_task1'
 data_root = 'data/nuscenes/'
 file_client_args = dict(backend='disk')
 
