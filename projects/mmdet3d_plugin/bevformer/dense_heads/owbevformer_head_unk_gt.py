@@ -364,11 +364,16 @@ class OWBEVFormerHead_UnkGT(DETRHead):
         num_imgs = cls_scores.size(0)
         cls_scores_list = [cls_scores[i] for i in range(num_imgs)]
         bbox_preds_list = [bbox_preds[i] for i in range(num_imgs)]
+        
+        for i in range(len(gt_labels_list)):
+            # 将大于已知标签的元素设置为0
+            gt_labels_list[i][gt_labels_list[i] > self.num_classes - 1] = 0
+        
         cls_reg_targets = self.get_targets(cls_scores_list, bbox_preds_list,
                                            gt_bboxes_list, gt_labels_list,
                                            gt_bboxes_ignore_list)
         (labels_list, label_weights_list, bbox_targets_list, bbox_weights_list,
-         num_total_pos, num_total_neg) = cls_reg_targets
+         num_total_pos, num_total_neg, pos_inds_list) = cls_reg_targets
         labels = torch.cat(labels_list, 0)
         label_weights = torch.cat(label_weights_list, 0)
         bbox_targets = torch.cat(bbox_targets_list, 0)
@@ -444,7 +449,7 @@ class OWBEVFormerHead_UnkGT(DETRHead):
         assert gt_bboxes_ignore is None, \
             f'{self.__class__.__name__} only supports ' \
             f'for gt_bboxes_ignore setting to None.'
-
+        
         all_cls_scores = preds_dicts['all_cls_scores']  # 6 x b x num_query x 10
         all_bbox_preds = preds_dicts['all_bbox_preds']  # 6 x b x num_query x 10
         enc_cls_scores = preds_dicts['enc_cls_scores']  # none
@@ -522,112 +527,3 @@ class OWBEVFormerHead_UnkGT(DETRHead):
             ret_list.append([bboxes, scores, labels])
 
         return ret_list
-    
-def get_corners_pred_bb(bbox):
-
-    # 分解边界框
-    # center in the bev
-    cx = bbox[..., 0:1]
-    cy = bbox[..., 1:2]
-    cz = bbox[..., 4:5]
-
-    # size
-    w = bbox[..., 2:3]
-    l = bbox[..., 3:4]
-    h = bbox[..., 5:6]
-
-    # exp
-    w = w.exp()
-    l = l.exp()
-    h = h.exp()
-
-    sin, cos = bbox[:,6], bbox[:,7]
-    rot = torch.atan2(sin, cos)
-
-    # 首先，将旋转的弧度转换为角度
-    rot_degrees = rot * (180 / np.pi)
-
-    for i in range(len(rot_degrees)):
-        if rot_degrees[i] >= 0:
-            rot_degrees[i] -= 90
-        else:
-            rot_degrees[i] += 90
-
-    rot = rot_degrees / (180 / np.pi)
-
-
-    # 创建一个3D边界框的8个角点在局部坐标系中的坐标
-    local_corners = torch.stack([-l/2, -w/2, -h/2, l/2, -w/2, -h/2, l/2, w/2, -h/2, -l/2, w/2, -h/2,
-                                 -l/2, -w/2, h/2, l/2, -w/2, h/2, l/2, w/2, h/2, -l/2, w/2, h/2], dim=-1)
-
-    local_corners = local_corners.view(*l.shape[:-1], 8, 3)
-    local_corners = local_corners.permute(0, 2, 1)  # 重塑为[batch_size, 3, 8]
-
-    # 构建旋转矩阵
-    zeros, ones = torch.zeros_like(rot), torch.ones_like(rot)
-    rotation_matrix = torch.stack([cos, -sin, zeros, sin, cos, zeros, zeros, zeros, ones], dim=-1)
-    rotation_matrix = rotation_matrix.view(-1, 3, 3) 
-
-    # 旋转角点
-    rotated_corners = torch.einsum('bij,bjk->bik', rotation_matrix, local_corners)
-
-    # 平移角点
-    xyz = torch.cat([cx, cy, cz], dim=-1)
-    global_corners = rotated_corners.permute(0, 2, 1) + xyz.unsqueeze(1)
-
-    return global_corners
-
-def get_corners_gt(bbox):
-
-    # 分解边界框
-    # center in the bev
-    cx = bbox[..., 0:1]
-    cy = bbox[..., 1:2]
-    cz = bbox[..., 2:3]
-
-    # size
-    w = bbox[..., 3:4]
-    l = bbox[..., 4:5]
-    h = bbox[..., 5:6]
-
-    # rot
-    rot = bbox[:,6:7]
-    cos, sin = torch.cos(rot), torch.sin(rot)
-
-    # 创建一个3D边界框的8个角点在局部坐标系中的坐标
-
-    lwh = torch.cat([l, w, h], dim=-1)
-    x, y, z = lwh[:, 0] / 2, lwh[:, 1] / 2, lwh[:, 2] / 2
-    local_corners = torch.stack([-x, -y, -z, x, -y, -z, x, y, -z, -x, y, -z,
-                                  -x, -y, z, x, -y, z, x, y, z, -x, y, z], dim=-1)
-
-    local_corners = local_corners.view(*lwh.shape[:-1], 8, 3)
-    local_corners = local_corners.permute(0, 2, 1)  # 重塑为[900, 3, 8]
-
-    # 首先，将旋转的弧度转换为角度
-    rot_degrees = rot * (180 / np.pi)
-
-    for i in range(len(rot_degrees)):
-        if rot_degrees[i] >= 0:
-            rot_degrees[i] -= 90
-        else:
-            rot_degrees[i] += 90
-
-    rot = rot_degrees / (180 / np.pi)
-
-    # 构建旋转矩阵
-    cos, sin = rot.cos(), rot.sin()
-
-    zeros, ones = torch.zeros_like(rot), torch.ones_like(rot)
-    rotation_matrix = torch.stack([cos, -sin, zeros, sin, cos, zeros, zeros, zeros, ones], dim=-1)
-    rotation_matrix = rotation_matrix.view(*rot.shape[:-1], 3, 3)
-
-    # 旋转角点
-    rotated_corners = torch.einsum('bij,bjk->bik', rotation_matrix, local_corners)
-
-    # 平移角点
-    xyz = torch.cat([cx, cy, cz], dim=-1)
-    global_corners = rotated_corners.permute(0, 2, 1) + xyz.unsqueeze(1)
-
-    return global_corners
-
