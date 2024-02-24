@@ -68,13 +68,12 @@ model = dict(
         num_outs=4,
         relu_before_extra_convs=True),
     pts_bbox_head=dict(
-        type='OWBEVFormerHead_UnkGT',
+        type='OWBEVFormerHead_UnkGT_task1',
         bev_h=bev_h_,
         bev_w=bev_w_,
         num_query=900,
         num_classes=TRAIN_NUM_CLASS+1,
         topk=10,
-        owod_decoder_layer=6,
         in_channels=_dim_,
         sync_cls_avg_factor=True,
         with_box_refine=True,
@@ -259,7 +258,7 @@ lr_config = dict(
     warmup_ratio=1.0 / 3,
     min_lr_ratio=1e-3)
 total_epochs = 6
-evaluation = dict(interval=6, pipeline=test_pipeline)
+evaluation = dict(interval=1, pipeline=test_pipeline)
 
 runner = dict(type='EpochBasedRunner', max_epochs=total_epochs)
 

@@ -18,7 +18,7 @@ import time
 from nuscenes.nuscenes import NuScenes
 
 @HEADS.register_module()
-class OWBEVFormerHead_UnkGT(DETRHead):
+class OWBEVFormerHead_UnkGT_task1(DETRHead):
     """Head of Detr3D.
     Args:
         with_box_refine (bool): Whether to refine the reference points
@@ -69,7 +69,7 @@ class OWBEVFormerHead_UnkGT(DETRHead):
         self.real_w = self.pc_range[3] - self.pc_range[0]
         self.real_h = self.pc_range[4] - self.pc_range[1]
         self.num_cls_fcs = num_cls_fcs - 1
-        super(OWBEVFormerHead_UnkGT, self).__init__(
+        super(OWBEVFormerHead_UnkGT_task1, self).__init__(
             *args, transformer=transformer, **kwargs)
         self.code_weights = nn.Parameter(torch.tensor(
             self.code_weights, requires_grad=False), requires_grad=False)

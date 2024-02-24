@@ -315,14 +315,14 @@ class OWCustomNuScenesDatasetUnkGT_Task1(NuScenesDataset):
                     elif name in ['bicycle', 'motorcycle']:
                         attr = 'cycle.with_rider'
                     else:
-                        attr = OWCustomNuScenesDatasetUnkGT.DefaultAttribute[name]
+                        attr = OWCustomNuScenesDatasetUnkGT_Task1.DefaultAttribute[name]
                 else:
                     if name in ['pedestrian']:
                         attr = 'pedestrian.standing'
                     elif name in ['bus']:
                         attr = 'vehicle.stopped'
                     else:
-                        attr = OWCustomNuScenesDatasetUnkGT.DefaultAttribute[name]
+                        attr = OWCustomNuScenesDatasetUnkGT_Task1.DefaultAttribute[name]
 
                 nusc_anno = dict(
                     sample_token=sample_token,
@@ -555,8 +555,8 @@ class OWCustomNuScenesDatasetUnkGT_Task1_ft(NuScenesDataset):
         'traffic_cone': '',
         'unk_obj': '',
     }
-    TRAIN_CLASSES = ( 'car', 'construction_vehicle', 'barrier', 'bicycle', 'pedestrian', 'unk_obj', 'truck', 'bus', 'motorcycle', 'traffic_cone', 'trailer')
-    EVAL_CLASSES = ( 'car', 'construction_vehicle', 'barrier', 'bicycle', 'pedestrian', 'unk_obj', 'truck', 'bus', 'motorcycle')
+    TRAIN_CLASSES = ( 'unk_obj', 'car', 'construction_vehicle', 'barrier', 'bicycle', 'pedestrian', 'truck', 'bus', 'motorcycle', 'traffic_cone', 'trailer')
+    EVAL_CLASSES = ( 'unk_obj', 'car', 'construction_vehicle', 'barrier', 'bicycle', 'pedestrian',  'truck', 'bus', 'motorcycle')
 
     def __init__(self, queue_length=4, bev_size=(200, 200), overlap_test=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -835,14 +835,14 @@ class OWCustomNuScenesDatasetUnkGT_Task1_ft(NuScenesDataset):
                     elif name in ['bicycle', 'motorcycle']:
                         attr = 'cycle.with_rider'
                     else:
-                        attr = OWCustomNuScenesDatasetUnkGT.DefaultAttribute[name]
+                        attr = OWCustomNuScenesDatasetUnkGT_Task1_ft.DefaultAttribute[name]
                 else:
                     if name in ['pedestrian']:
                         attr = 'pedestrian.standing'
                     elif name in ['bus']:
                         attr = 'vehicle.stopped'
                     else:
-                        attr = OWCustomNuScenesDatasetUnkGT.DefaultAttribute[name]
+                        attr = OWCustomNuScenesDatasetUnkGT_Task1_ft.DefaultAttribute[name]
 
                 nusc_anno = dict(
                     sample_token=sample_token,

@@ -1,6 +1,11 @@
 from .bev_head import BEVHead
 from .bevformer_head import BEVFormerHead
-from .owbevformer_head_unk_gt import OWBEVFormerHead_UnkGT
+
+# finetune task
+from .owbevformer_head_task1_ft import OWBEVFormerHead_task1_ft
+
+# unk_gt
+from .owbevformer_head_unk_gt_task1 import OWBEVFormerHead_UnkGT_task1
 
 # based on BEVFormer & OWDETR
 from .owbevformer_headV1 import OWBEVFormerHeadV1
@@ -13,6 +18,3 @@ from .owbevformer_headV1_rpn_wo_bbox_w_sw_rescale import OWBEVFormerHeadV1RPNV1_
 from .owbevformer_headV1_rpn_w_bbox_w_sw import OWBEVFormerHeadV1RPN_w_bb_with_soft_weight # with bbox refine with soft weight rescale
 from .owbevformer_headV1_rpn_wo_bbox_w_sw_wo_nc import OWBEVFormerHeadV1RPNV1_with_soft_weight_without_nc_branch
 from .owbevformer_headV1_rpn_wo_bbox_w_sw_wo_nc_w_single_down_threshold import OWBEVFormerHeadV1RPNV1_with_soft_weight_without_nc_branch_with_single_down_threshold
-
-# based on owbevformer_headV1_rpn_wo_bbox + new nc branch
-from .owbevformer_headV2 import OWBEVFormerHeadV2
