@@ -18,7 +18,7 @@ import time
 from nuscenes.nuscenes import NuScenes
 
 @HEADS.register_module()
-class OWBEVFormerHead_task1_ft(DETRHead):
+class OWBEVFormerHead_task2_ft(DETRHead):
     """Head of Detr3D.
     Args:
         with_box_refine (bool): Whether to refine the reference points
@@ -69,7 +69,7 @@ class OWBEVFormerHead_task1_ft(DETRHead):
         self.real_w = self.pc_range[3] - self.pc_range[0]
         self.real_h = self.pc_range[4] - self.pc_range[1]
         self.num_cls_fcs = num_cls_fcs - 1
-        super(OWBEVFormerHead_task1_ft, self).__init__(
+        super(OWBEVFormerHead_task2_ft, self).__init__(
             *args, transformer=transformer, **kwargs)
         self.code_weights = nn.Parameter(torch.tensor(
             self.code_weights, requires_grad=False), requires_grad=False)
@@ -368,8 +368,8 @@ class OWBEVFormerHead_task1_ft(DETRHead):
         cls_scores_list = [cls_scores[i] for i in range(num_imgs)]
         bbox_preds_list = [bbox_preds[i] for i in range(num_imgs)]
         
-        min_label_to_keep = 6
-        max_label_to_keep = 8
+        min_label_to_keep = 9
+        max_label_to_keep = 10
         for i in range(len(gt_labels_list)):
             # 使用布尔索引去除不在指定范围内的标签
             gt_labels_list[i] = gt_labels_list[i][(gt_labels_list[i] >= min_label_to_keep) & (gt_labels_list[i] <= max_label_to_keep)]
