@@ -14,13 +14,11 @@ voxel_size = [0.2, 0.2, 8]
 TRAIN_NUM_CLASS = 5
 
 train_class_names = [
-    'car', 'construction_vehicle', 'barrier',
-    'bicycle', 'pedestrian', 'truck', 'trailer', 'bus', 'motorcycle', 'traffic_cone'
+    'unk_obj', 'car', 'construction_vehicle', 'barrier', 'bicycle', 'pedestrian', 'truck', 'trailer', 'bus', 'motorcycle', 'traffic_cone'
 ]
 
 eval_class_names = [
-    'car', 'construction_vehicle', 'barrier',
-    'bicycle', 'pedestrian', 'unk_obj'
+    'unk_obj', 'car', 'construction_vehicle', 'barrier', 'bicycle', 'pedestrian'
 ]
 
 img_norm_cfg = dict(
@@ -55,7 +53,7 @@ model = dict(
         depth=101,
         num_stages=4,
         out_indices=(1, 2, 3),
-        frozen_stages=1,
+        frozen_stages=2,
         norm_cfg=dict(type='BN2d', requires_grad=False),
         norm_eval=True,
         style='caffe',
@@ -70,14 +68,12 @@ model = dict(
         num_outs=4,
         relu_before_extra_convs=True),
     pts_bbox_head=dict(
-        type='OWBEVFormerHead_UnkGT',
+        type='OWBEVFormerHead_UnkGT_task1',
         bev_h=bev_h_,
         bev_w=bev_w_,
         num_query=900,
         num_classes=TRAIN_NUM_CLASS+1,
         topk=10,
-        owod=True,
-        owod_decoder_layer=6,
         in_channels=_dim_,
         sync_cls_avg_factor=True,
         with_box_refine=True,
@@ -178,7 +174,7 @@ model = dict(
             iou_cost=dict(type='IoUCost', weight=0.0), # Fake cost. This is just to make it compatible with DETR head.
             pc_range=point_cloud_range))))
 
-dataset_type = 'OWCustomNuScenesDatasetUnkGT'
+dataset_type = 'OWCustomNuScenesDatasetUnkGT_Task1'
 data_root = 'data/nuscenes/'
 file_client_args = dict(backend='disk')
 
@@ -219,7 +215,7 @@ data = dict(
     train=dict(
         type=dataset_type,
         data_root=data_root,
-        ann_file=data_root + 'nuscenes_half_infos_temporal_train.pkl',
+        ann_file=data_root + 'nuscenes_infos_temporal_train.pkl',
         pipeline=train_pipeline,
         classes=train_class_names,
         modality=input_modality,
@@ -262,7 +258,7 @@ lr_config = dict(
     warmup_ratio=1.0 / 3,
     min_lr_ratio=1e-3)
 total_epochs = 6
-evaluation = dict(interval=6, pipeline=test_pipeline)
+evaluation = dict(interval=1, pipeline=test_pipeline)
 
 runner = dict(type='EpochBasedRunner', max_epochs=total_epochs)
 
