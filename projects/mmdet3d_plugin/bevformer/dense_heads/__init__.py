@@ -2,7 +2,8 @@ from .bev_head import BEVHead
 from .bevformer_head import BEVFormerHead
 
 # finetune task
-from .owbevformer_head_task1_ft import OWBEVFormerHead_task1_ft
+from .owbevformer_head_task2_ft import OWBEVFormerHead_task2_ft
+from .owbevformer_head_task3_ft import OWBEVFormerHead_task3_ft
 
 # unk_gt
 from .owbevformer_head_unk_gt_task1 import OWBEVFormerHead_UnkGT_task1

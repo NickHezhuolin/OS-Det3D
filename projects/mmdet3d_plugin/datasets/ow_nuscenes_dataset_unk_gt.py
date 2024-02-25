@@ -538,7 +538,7 @@ class OWCustomNuScenesDatasetUnkGT_Task1(NuScenesDataset):
         return Compose(pipeline)
 
 @DATASETS.register_module()
-class OWCustomNuScenesDatasetUnkGT_Task1_ft(NuScenesDataset):
+class OWCustomNuScenesDatasetUnkGT_Task2_ft(NuScenesDataset):
     r"""NuScenes Dataset.
         This datset only add camera intrinsics and extrinsics to the results.
         """
@@ -835,14 +835,14 @@ class OWCustomNuScenesDatasetUnkGT_Task1_ft(NuScenesDataset):
                     elif name in ['bicycle', 'motorcycle']:
                         attr = 'cycle.with_rider'
                     else:
-                        attr = OWCustomNuScenesDatasetUnkGT_Task1_ft.DefaultAttribute[name]
+                        attr = OWCustomNuScenesDatasetUnkGT_Task2_ft.DefaultAttribute[name]
                 else:
                     if name in ['pedestrian']:
                         attr = 'pedestrian.standing'
                     elif name in ['bus']:
                         attr = 'vehicle.stopped'
                     else:
-                        attr = OWCustomNuScenesDatasetUnkGT_Task1_ft.DefaultAttribute[name]
+                        attr = OWCustomNuScenesDatasetUnkGT_Task2_ft.DefaultAttribute[name]
 
                 nusc_anno = dict(
                     sample_token=sample_token,

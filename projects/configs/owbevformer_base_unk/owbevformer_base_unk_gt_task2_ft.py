@@ -178,7 +178,7 @@ model = dict(
             iou_cost=dict(type='IoUCost', weight=0.0), # Fake cost. This is just to make it compatible with DETR head.
             pc_range=point_cloud_range))))
 
-dataset_type = 'OWCustomNuScenesDatasetUnkGT'
+dataset_type = 'OWCustomNuScenesDatasetUnkGT_'
 data_root = 'data/nuscenes/'
 file_client_args = dict(backend='disk')
 
@@ -261,8 +261,8 @@ lr_config = dict(
     warmup_iters=500,
     warmup_ratio=1.0 / 3,
     min_lr_ratio=1e-3)
-total_epochs = 6
-evaluation = dict(interval=6, pipeline=test_pipeline)
+total_epochs = 18
+evaluation = dict(interval=18, pipeline=test_pipeline)
 
 runner = dict(type='EpochBasedRunner', max_epochs=total_epochs)
 
@@ -274,5 +274,5 @@ log_config = dict(
     ])
 
 checkpoint_config = dict(interval=1)
-work_dir = 'work_dirs/owbevformer_base_unk_gt_task2'
-load_from = 'work_dirs/owbevformer_base_unk_gt_task1_ft/epoch_18.pth'
+work_dir = 'work_dirs/owbevformer_base_unk_gt_task2_ft'
+load_from = 'work_dirs/owbevformer_base_unk_gt_task1/epoch_6.pth'
