@@ -11,7 +11,7 @@ plugin_dir = 'projects/mmdet3d_plugin/'
 point_cloud_range = [-51.2, -51.2, -5.0, 51.2, 51.2, 3.0]
 voxel_size = [0.2, 0.2, 8]
 
-NUM_CLASS=7
+NUM_CLASS=8
 
 img_norm_cfg = dict(
     mean=[103.530, 116.280, 123.675], std=[1.0, 1.0, 1.0], to_rgb=False)
@@ -22,8 +22,8 @@ img_norm_cfg = dict(
 # ]
 
 class_names = [
-    'car', 'construction_vehicle', 'bus', 'barrier',
-    'bicycle', 'pedestrian', 'traffic_cone'
+    'car', 'construction_vehicle', 'barrier',
+    'bicycle', 'pedestrian', 'truck', 'bus', 'motorcycle'
 ]
 
 input_modality = dict(
@@ -164,7 +164,7 @@ model = dict(
             iou_cost=dict(type='IoUCost', weight=0.0), # Fake cost. This is just to make it compatible with DETR head.
             pc_range=point_cloud_range))))
 
-dataset_type = 'CustomNuScenesDataset7cls'
+dataset_type = 'CustomNuScenesDataset8cls'
 data_root = 'data/nuscenes/'
 file_client_args = dict(backend='disk')
 
@@ -200,12 +200,12 @@ test_pipeline = [
 ]
 
 data = dict(
-    samples_per_gpu=2,
+    samples_per_gpu=1,
     workers_per_gpu=4,
     train=dict(
         type=dataset_type,
         data_root=data_root,
-        ann_file=data_root + 'nuscenes_infos_temporal_train.pkl',
+        ann_file=data_root + 'nuscenes_task2_infos_temporal_train_filtered_for_general.pkl',
         pipeline=train_pipeline,
         classes=class_names,
         modality=input_modality,
@@ -248,8 +248,7 @@ lr_config = dict(
     warmup_ratio=1.0 / 3,
     min_lr_ratio=1e-3)
 total_epochs = 24
-evaluation = dict(interval=12, pipeline=test_pipeline)
-load_from = 'ckpts/r101_dcn_fcos3d_pretrain.pth'
+evaluation = dict(interval=24, pipeline=test_pipeline)
 runner = dict(type='EpochBasedRunner', max_epochs=total_epochs)
 log_config = dict(
     interval=50,
@@ -259,4 +258,5 @@ log_config = dict(
     ])
 
 checkpoint_config = dict(interval=1)
-work_dir = 'work_dirs/bevformer_base_7cls'
+work_dir = 'work_dirs/bevformer_base_8cls'
+load_from = 'ckpts/bevformer_base_epoch_18_5_cls.pth'

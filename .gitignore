@@ -140,3 +140,6 @@ dmypy.json
 mmdetection3d/
 mmdetection3d
 visualization/
+*.pkl
+count_category.py
+mod_pkl.py

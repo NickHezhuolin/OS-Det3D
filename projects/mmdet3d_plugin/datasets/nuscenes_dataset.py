@@ -27,6 +27,7 @@ class CustomNuScenesDataset(NuScenesDataset):
         self.queue_length = queue_length
         self.overlap_test = overlap_test
         self.bev_size = bev_size
+        self.filter_empty_gt = True
         
     def prepare_train_data(self, index):
         """
@@ -860,7 +861,7 @@ class CustomNuScenesDataset5cls(NuScenesDataset):
     
     
 @DATASETS.register_module()
-class CustomNuScenesDataset5clsV2(NuScenesDataset):
+class CustomNuScenesDataset8cls(NuScenesDataset):
     r"""NuScenes Dataset.
 
     This datset only add camera intrinsics and extrinsics to the results.
@@ -871,15 +872,15 @@ class CustomNuScenesDataset5clsV2(NuScenesDataset):
         'pedestrian': 'pedestrian.moving',
         # 'trailer': 'vehicle.parked',
         'truck': 'vehicle.parked',
-        # 'bus': 'vehicle.moving',
-        # 'motorcycle': 'cycle.without_rider',
-        # 'construction_vehicle': 'vehicle.parked',
+        'bus': 'vehicle.moving',
+        'motorcycle': 'cycle.without_rider',
+        'construction_vehicle': 'vehicle.parked',
         'bicycle': 'cycle.without_rider',
         'barrier': '',
         # 'traffic_cone': '',
     }
-    CLASSES = (    'car', 'truck', 'barrier',
-    'bicycle', 'pedestrian')
+    CLASSES = (    'car', 'construction_vehicle', 'barrier',
+    'bicycle', 'pedestrian', 'truck','bus', 'motorcycle')
 
     def __init__(self, queue_length=4, bev_size=(200, 200), overlap_test=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1137,14 +1138,14 @@ class CustomNuScenesDataset5clsV2(NuScenesDataset):
                     elif name in ['bicycle', 'motorcycle']:
                         attr = 'cycle.with_rider'
                     else:
-                        attr = CustomNuScenesDataset5clsV2.DefaultAttribute[name]
+                        attr = CustomNuScenesDataset8cls.DefaultAttribute[name]
                 else:
                     if name in ['pedestrian']:
                         attr = 'pedestrian.standing'
                     elif name in ['bus']:
                         attr = 'vehicle.stopped'
                     else:
-                        attr = CustomNuScenesDataset5clsV2.DefaultAttribute[name]
+                        attr = CustomNuScenesDataset8cls.DefaultAttribute[name]
 
                 nusc_anno = dict(
                     sample_token=sample_token,
