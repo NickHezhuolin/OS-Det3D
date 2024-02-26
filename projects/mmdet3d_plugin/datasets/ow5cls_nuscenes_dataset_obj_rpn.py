@@ -161,7 +161,7 @@ class OWCustomNuScenesDataset5CLSOBJRPN(NuScenesDataset):
             tmp = info['lidar_path']
             file_name_with_extension = tmp.split("/")[-1]  # 提取文件名和扩展名 data/nuscenes-mini/samples/LIDAR_TOP/n008-2018-08-01-15-16-36-0400__LIDAR_TOP__1533151603547590.pcd.bin
             file_name = file_name_with_extension.split(".")[0]  # 去掉扩展名
-            proposal_path = f'data/lidar_rpn/voxel_agno_5cls_train_obj_score/{file_name}.pkl'
+            proposal_path = f'data/lidar_rpn/voxel_agno_5cls_lidar_rpn_center_532_train/{file_name}.pkl'
             
             for cam_type, cam_info in info['cams'].items():
                 image_paths.append(cam_info['data_path'])

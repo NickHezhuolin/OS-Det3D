@@ -49,7 +49,7 @@ queue_length = 4 # each sequence contains `queue_length` frames.
 model = dict(
     type='BEVFormer',
     use_grid_mask=True,
-    video_test_mode=True,
+    video_test_mode=False,
     img_backbone=dict(
         type='ResNet',
         depth=101,
@@ -70,7 +70,7 @@ model = dict(
         num_outs=4,
         relu_before_extra_convs=True),
     pts_bbox_head=dict(
-        type='OWBEVFormerHeadV1RPNV1_with_soft_weight_without_nc_branch',
+        type='OWBEVFormerHead_task2_ft',
         bev_h=bev_h_,
         bev_w=bev_w_,
         num_query=900,
@@ -178,7 +178,7 @@ model = dict(
             iou_cost=dict(type='IoUCost', weight=0.0), # Fake cost. This is just to make it compatible with DETR head.
             pc_range=point_cloud_range))))
 
-dataset_type = 'OWCustomNuScenesDataset5CLSOBJRPN'
+dataset_type = 'CustomNuScenesDataset8cls'
 data_root = 'data/nuscenes/'
 file_client_args = dict(backend='disk')
 
@@ -219,7 +219,7 @@ data = dict(
     train=dict(
         type=dataset_type,
         data_root=data_root,
-        ann_file=data_root + 'nuscenes_infos_temporal_train.pkl',
+        ann_file=data_root + 'nuscenes_task2_infos_temporal_train_filtered_for_general.pkl',
         pipeline=train_pipeline,
         classes=train_class_names,
         modality=input_modality,
@@ -261,8 +261,8 @@ lr_config = dict(
     warmup_iters=500,
     warmup_ratio=1.0 / 3,
     min_lr_ratio=1e-3)
-total_epochs = 6
-evaluation = dict(interval=6, pipeline=test_pipeline)
+total_epochs = 18
+evaluation = dict(interval=18, pipeline=test_pipeline)
 
 runner = dict(type='EpochBasedRunner', max_epochs=total_epochs)
 
@@ -274,5 +274,5 @@ log_config = dict(
     ])
 
 checkpoint_config = dict(interval=1)
-work_dir = 'work_dirs/owbevformer_custom_epoch_18_5_cls_rpn_without_bbox_refine_and_nc_branch_with_soft_weight_0205_rpn_523'
-load_from = 'ckpts/bevformer_base_epoch_18_5_cls.pth'
+work_dir = 'work_dirs/ow_lpgc_task2_ft'
+load_from = 'ckpts/ours_task1_epoch_6.pth'

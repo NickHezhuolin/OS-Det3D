@@ -880,7 +880,7 @@ class CustomNuScenesDataset8cls(NuScenesDataset):
         # 'traffic_cone': '',
     }
     CLASSES = (    'car', 'construction_vehicle', 'barrier',
-    'bicycle', 'pedestrian', 'truck','bus', 'motorcycle')
+    'bicycle', 'pedestrian','unk_obj', 'truck','bus', 'motorcycle')
 
     def __init__(self, queue_length=4, bev_size=(200, 200), overlap_test=False, *args, **kwargs):
         super().__init__(*args, **kwargs)

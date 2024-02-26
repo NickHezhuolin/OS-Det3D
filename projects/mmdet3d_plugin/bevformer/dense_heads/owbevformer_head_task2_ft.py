@@ -69,7 +69,7 @@ class OWBEVFormerHead_task2_ft(DETRHead):
         self.real_w = self.pc_range[3] - self.pc_range[0]
         self.real_h = self.pc_range[4] - self.pc_range[1]
         self.num_cls_fcs = num_cls_fcs - 1
-        super(OWBEVFormerHead_task1_ft, self).__init__(
+        super(OWBEVFormerHead_task2_ft, self).__init__(
             *args, transformer=transformer, **kwargs)
         self.code_weights = nn.Parameter(torch.tensor(
             self.code_weights, requires_grad=False), requires_grad=False)
@@ -192,9 +192,6 @@ class OWBEVFormerHead_task2_ft(DETRHead):
             reference = inverse_sigmoid(reference)
             outputs_class = self.cls_branches[lvl](hs[lvl])
             tmp = self.reg_branches[lvl](hs[lvl])
-            
-            if self.owod:
-                outputs_class_nc = self.nc_cls_branches[lvl](hs[lvl])
 
             # TODO: check the shape of reference
             assert reference.shape[-1] == 3
@@ -274,10 +271,7 @@ class OWBEVFormerHead_task2_ft(DETRHead):
                                     self.num_classes,
                                     dtype=torch.long)
         labels[pos_inds] = gt_labels[sampling_result.pos_assigned_gt_inds]
-        
-        # 只学对应留下的label，因为背景在 closed-set model 中学过了
-        label_weights = torch.zeros_like(labels)
-        label_weights[pos_inds] = 1
+        label_weights = gt_bboxes.new_ones(num_bboxes)
 
         # bbox targets
         bbox_targets = torch.zeros_like(bbox_pred)[..., :gt_c]
@@ -338,7 +332,7 @@ class OWBEVFormerHead_task2_ft(DETRHead):
         num_total_pos = sum((inds.numel() for inds in pos_inds_list))
         num_total_neg = sum((inds.numel() for inds in neg_inds_list))
         return (labels_list, label_weights_list, bbox_targets_list,
-                bbox_weights_list, num_total_pos, num_total_neg, pos_inds_list)
+                bbox_weights_list, num_total_pos, num_total_neg)
         
     def loss_single(self,
                     cls_scores,
@@ -378,7 +372,7 @@ class OWBEVFormerHead_task2_ft(DETRHead):
                                            gt_bboxes_list, gt_labels_list,
                                            gt_bboxes_ignore_list)
         (labels_list, label_weights_list, bbox_targets_list, bbox_weights_list,
-         num_total_pos, num_total_neg, pos_inds_list) = cls_reg_targets
+         num_total_pos, num_total_neg) = cls_reg_targets
         labels = torch.cat(labels_list, 0)
         label_weights = torch.cat(label_weights_list, 0)
         bbox_targets = torch.cat(bbox_targets_list, 0)
@@ -454,7 +448,6 @@ class OWBEVFormerHead_task2_ft(DETRHead):
         assert gt_bboxes_ignore is None, \
             f'{self.__class__.__name__} only supports ' \
             f'for gt_bboxes_ignore setting to None.'
-        
         all_cls_scores = preds_dicts['all_cls_scores']  # 6 x b x num_query x 10
         all_bbox_preds = preds_dicts['all_bbox_preds']  # 6 x b x num_query x 10
         enc_cls_scores = preds_dicts['enc_cls_scores']  # none

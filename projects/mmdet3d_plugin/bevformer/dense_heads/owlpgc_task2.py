@@ -20,7 +20,7 @@ from nuscenes.nuscenes import NuScenes
 import os
 
 @HEADS.register_module()
-class OWBEVFormerHeadV1RPNV1_with_soft_weight_without_nc_branch(DETRHead):
+class OWLPGC_task2(DETRHead):
     """Head of Detr3D.
     Args:
         with_box_refine (bool): Whether to refine the reference points
@@ -73,7 +73,7 @@ class OWBEVFormerHeadV1RPNV1_with_soft_weight_without_nc_branch(DETRHead):
         self.real_w = self.pc_range[3] - self.pc_range[0]
         self.real_h = self.pc_range[4] - self.pc_range[1]
         self.num_cls_fcs = num_cls_fcs - 1
-        super(OWBEVFormerHeadV1RPNV1_with_soft_weight_without_nc_branch, self).__init__(
+        super(OWLPGC_task2, self).__init__(
             *args, transformer=transformer, **kwargs)
         self.code_weights = nn.Parameter(torch.tensor(
             self.code_weights, requires_grad=False), requires_grad=False)
@@ -434,6 +434,14 @@ class OWBEVFormerHeadV1RPNV1_with_soft_weight_without_nc_branch(DETRHead):
         num_imgs = cls_scores.size(0)
         cls_scores_list = [cls_scores[i] for i in range(num_imgs)]
         bbox_preds_list = [bbox_preds[i] for i in range(num_imgs)]
+        
+        min_label_to_keep = 6
+        max_label_to_keep = 8
+        for i in range(len(gt_labels_list)):
+            # 使用布尔索引去除不在指定范围内的标签
+            gt_labels_list[i] = gt_labels_list[i][(gt_labels_list[i] >= min_label_to_keep) & (gt_labels_list[i] <= max_label_to_keep)]
+        
+        
         cls_reg_targets = self.get_targets(cls_scores_list, bbox_preds_list,
                                            gt_bboxes_list, gt_labels_list,
                                            gt_bboxes_ignore_list)
@@ -621,7 +629,7 @@ class OWBEVFormerHeadV1RPNV1_with_soft_weight_without_nc_branch(DETRHead):
             means_bb[:] = 10e10
             means_bb[unmatched_indices] = means_bb_slices
 
-            _, topk_inds = torch.topk(-means_bb, self.topk)
+            _, topk_inds = torch.topk(means_bb, self.topk)
             topk_inds = topk_inds.to(owod_device)
             
             #############################################
