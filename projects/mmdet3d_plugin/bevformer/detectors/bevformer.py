@@ -258,8 +258,11 @@ class BEVFormer(MVXTwoStageDetector):
         prev_img = img[:, :-1, ...]
         img = img[:, -1, ...]
 
-        prev_img_metas = copy.deepcopy(img_metas)
-        prev_bev = self.obtain_history_bev(prev_img, prev_img_metas)
+        if self.video_test_mode:
+            prev_img_metas = copy.deepcopy(img_metas)
+            prev_bev = self.obtain_history_bev(prev_img, prev_img_metas)
+        else:
+            prev_bev = None
 
         img_metas = [each[len_queue-1] for each in img_metas]
         if not img_metas[0]['prev_bev_exists']:

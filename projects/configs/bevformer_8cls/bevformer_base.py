@@ -39,12 +39,12 @@ _ffn_dim_ = _dim_*2
 _num_levels_ = 4
 bev_h_ = 200
 bev_w_ = 200
-queue_length = 4 # each sequence contains `queue_length` frames.
+queue_length = 2 # each sequence contains `queue_length` frames.
 
 model = dict(
     type='BEVFormer',
     use_grid_mask=True,
-    video_test_mode=True,
+    video_test_mode=False,
     img_backbone=dict(
         type='ResNet',
         depth=101,
