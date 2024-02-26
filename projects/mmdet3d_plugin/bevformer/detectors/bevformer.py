@@ -257,22 +257,23 @@ class BEVFormer(MVXTwoStageDetector):
         len_queue = img.size(1)
         prev_img = img[:, :-1, ...]
         img = img[:, -1, ...]
-
+        
         if self.video_test_mode:
             prev_img_metas = copy.deepcopy(img_metas)
             prev_bev = self.obtain_history_bev(prev_img, prev_img_metas)
         else:
             prev_bev = None
-
+        
         img_metas = [each[len_queue-1] for each in img_metas]
         if not img_metas[0]['prev_bev_exists']:
             prev_bev = None
         img_feats = self.extract_feat(img=img, img_metas=img_metas)
+        
         losses = dict()
         losses_pts = self.forward_pts_train(img_feats, gt_bboxes_3d,
                                             gt_labels_3d, img_metas,
                                             gt_bboxes_ignore, prev_bev)
-
+        
         losses.update(losses_pts)
         return losses
 
