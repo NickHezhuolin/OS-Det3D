@@ -7,6 +7,7 @@ from .owbevformer_head_task3_ft import OWBEVFormerHead_task3_ft
 
 # unk_gt
 from .owbevformer_head_unk_gt_task1 import OWBEVFormerHead_UnkGT_task1
+from .bevformer_head_3cls_unkgt import BEVFormerHead_3cls_UnkGT
 
 # based on BEVFormer & OWDETR
 from .owbevformer_headV1 import OWBEVFormerHeadV1
