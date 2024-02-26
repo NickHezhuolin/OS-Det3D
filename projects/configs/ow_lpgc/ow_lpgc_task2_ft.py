@@ -11,14 +11,16 @@ plugin_dir = 'projects/mmdet3d_plugin/'
 point_cloud_range = [-51.2, -51.2, -5.0, 51.2, 51.2, 3.0]
 voxel_size = [0.2, 0.2, 8]
 
-TRAIN_NUM_CLASS = 5
+CURRENT_KNOWN_CLASS = 8
 
 train_class_names = [
-    'unk_obj', 'car', 'construction_vehicle', 'barrier', 'bicycle', 'pedestrian', 'truck', 'trailer', 'bus', 'motorcycle', 'traffic_cone'
+    'car', 'construction_vehicle', 'barrier',
+    'bicycle', 'pedestrian', 'unk_obj','truck', 'bus', 'motorcycle'
 ]
 
 eval_class_names = [
-    'unk_obj', 'car', 'construction_vehicle', 'barrier', 'bicycle', 'pedestrian'
+    'car', 'construction_vehicle', 'barrier',
+    'bicycle', 'pedestrian', 'unk_obj', 'truck', 'bus', 'motorcycle'
 ]
 
 img_norm_cfg = dict(
@@ -68,12 +70,14 @@ model = dict(
         num_outs=4,
         relu_before_extra_convs=True),
     pts_bbox_head=dict(
-        type='OWBEVFormerHead_UnkGT_task1',
+        type='OWBEVFormerHeadV1RPNV1_with_soft_weight_without_nc_branch',
         bev_h=bev_h_,
         bev_w=bev_w_,
         num_query=900,
-        num_classes=TRAIN_NUM_CLASS+1,
+        num_classes=CURRENT_KNOWN_CLASS+1,
         topk=10,
+        owod=True,
+        owod_decoder_layer=6,
         in_channels=_dim_,
         sync_cls_avg_factor=True,
         with_box_refine=True,
@@ -140,7 +144,7 @@ model = dict(
             pc_range=point_cloud_range,
             max_num=300,
             voxel_size=voxel_size,
-            num_classes=TRAIN_NUM_CLASS+1),
+            num_classes=CURRENT_KNOWN_CLASS+1),
         positional_encoding=dict(
             type='LearnedPositionalEncoding',
             num_feats=_pos_dim_,
@@ -174,7 +178,7 @@ model = dict(
             iou_cost=dict(type='IoUCost', weight=0.0), # Fake cost. This is just to make it compatible with DETR head.
             pc_range=point_cloud_range))))
 
-dataset_type = 'OWCustomNuScenesDatasetUnkGT_Task1'
+dataset_type = 'OWCustomNuScenesDataset5CLSOBJRPN'
 data_root = 'data/nuscenes/'
 file_client_args = dict(backend='disk')
 
@@ -270,5 +274,5 @@ log_config = dict(
     ])
 
 checkpoint_config = dict(interval=1)
-work_dir = 'work_dirs/owbevformer_base_unk_gt_task1'
+work_dir = 'work_dirs/owbevformer_custom_epoch_18_5_cls_rpn_without_bbox_refine_and_nc_branch_with_soft_weight_0205_rpn_523'
 load_from = 'ckpts/bevformer_base_epoch_18_5_cls.pth'
