@@ -39,7 +39,7 @@ _ffn_dim_ = _dim_*2
 _num_levels_ = 4
 bev_h_ = 200
 bev_w_ = 200
-queue_length = 2 # each sequence contains `queue_length` frames.
+queue_length = 4 # each sequence contains `queue_length` frames.
 
 model = dict(
     type='BEVFormer',
@@ -50,7 +50,7 @@ model = dict(
         depth=101,
         num_stages=4,
         out_indices=(1, 2, 3),
-        frozen_stages=1,
+        frozen_stages=2,
         norm_cfg=dict(type='BN2d', requires_grad=False),
         norm_eval=True,
         style='caffe',
