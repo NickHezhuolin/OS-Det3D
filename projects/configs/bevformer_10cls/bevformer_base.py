@@ -205,7 +205,7 @@ data = dict(
     train=dict(
         type=dataset_type,
         data_root=data_root,
-        ann_file=data_root + 'nuscenes_task2_infos_temporal_train_filtered_for_general.pkl',
+        ann_file=data_root + 'nuscenes_task3_infos_temporal_train_filtered_for_general.pkl',
         pipeline=train_pipeline,
         classes=class_names,
         modality=input_modality,
@@ -258,5 +258,5 @@ log_config = dict(
     ])
 
 checkpoint_config = dict(interval=1)
-work_dir = 'work_dirs/bevformer_base_8cls'
+work_dir = 'work_dirs/bevformer_base_10cls'
 load_from = 'work_dirs/bevformer_base_8cls/latest.pth'
