@@ -1,4 +1,4 @@
-from .nuscenes_dataset import CustomNuScenesDataset, CustomNuScenesDataset5cls, CustomNuScenesDataset8cls
+from .nuscenes_dataset import CustomNuScenesDataset, CustomNuScenesDataset3cls, CustomNuScenesDataset5cls, CustomNuScenesDataset8cls, CustomNuScenesDataset10cls
 from .nuscenes_dataset_v2 import CustomNuScenesDatasetV2
 from .ow3cls_nuscenes_dataset import OWCustomNuScenesDataset3CLS, OWCustomNuScenesDataset3CLS_UnkGT
 from .ow5cls_nuscenes_dataset import OWCustomNuScenesDataset5CLS
@@ -9,7 +9,7 @@ from .ow5cls_nuscenes_dataset_obj_rpn import OWCustomNuScenesDataset5CLSOBJRPN
 from .builder import custom_build_dataset
 
 __all__ = [
-    'CustomNuScenesDataset', 'CustomNuScenesDataset8cls', 'CustomNuScenesDataset3cls',
+    'CustomNuScenesDataset', 'CustomNuScenesDataset8cls', 'CustomNuScenesDataset3cls', 'CustomNuScenesDataset10cls'
     'CustomNuScenesDatasetV2',
     'OWCustomNuScenesDataset3CLS', 'OWCustomNuScenesDataset3CLS_UnkGT',
     'OWCustomNuScenesDataset5CLS', 'OWCustomNuScenesDataset5CLS_V2', 
