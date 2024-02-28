@@ -777,7 +777,7 @@ class OWLPGC_task1(DETRHead):
         #     pickle.dump(bbox_targets_list, f)
         
         ow_match_labels = labels_list[0][pos_inds_list[0]].clone()
-        ow_match_labels_idx = pos_inds_list[0][ow_match_labels == (self.num_classes-1)]
+        ow_match_labels_idx = pos_inds_list[0][ow_match_labels == 5]
 
         # class init - list to tensor
         labels = torch.cat(labels_list, 0) 

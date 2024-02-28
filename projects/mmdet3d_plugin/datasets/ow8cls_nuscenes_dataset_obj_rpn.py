@@ -18,7 +18,7 @@ import random
 from datetime import date
 
 @DATASETS.register_module()
-class OWCustomNuScenesDataset5CLSOBJRPN(NuScenesDataset):
+class OWCustomNuScenesDataset8CLSOBJRPN(NuScenesDataset):
     r"""NuScenes Dataset.
         This datset only add camera intrinsics and extrinsics to the results.
         """
@@ -42,9 +42,9 @@ class OWCustomNuScenesDataset5CLSOBJRPN(NuScenesDataset):
         'car': 'vehicle.parked',
         'pedestrian': 'pedestrian.moving',
         # 'trailer': 'vehicle.parked',
-        # 'truck': 'vehicle.parked',
-        # 'bus': 'vehicle.moving',
-        # 'motorcycle': 'cycle.without_rider',
+        'truck': 'vehicle.parked',
+        'bus': 'vehicle.moving',
+        'motorcycle': 'cycle.without_rider',
         'construction_vehicle': 'vehicle.parked',
         'bicycle': 'cycle.without_rider',
         'barrier': '',
@@ -52,7 +52,7 @@ class OWCustomNuScenesDataset5CLSOBJRPN(NuScenesDataset):
         'unk_obj': '',
     }
     TRAIN_CLASSES = (    'car', 'construction_vehicle', 'barrier',
-    'bicycle', 'pedestrian'
+    'bicycle', 'pedestrian', 'unk_obj', 'truck', 'bus', 'motorcycle'
                 )
     EVAL_CLASSES = (    'car', 'construction_vehicle', 'barrier',
     'bicycle', 'pedestrian', 'unk_obj')
@@ -341,14 +341,14 @@ class OWCustomNuScenesDataset5CLSOBJRPN(NuScenesDataset):
                     elif name in ['bicycle', 'motorcycle']:
                         attr = 'cycle.with_rider'
                     else:
-                        attr = OWCustomNuScenesDataset5CLSOBJRPN.DefaultAttribute[name]
+                        attr = OWCustomNuScenesDataset8CLSOBJRPN.DefaultAttribute[name]
                 else:
                     if name in ['pedestrian']:
                         attr = 'pedestrian.standing'
                     elif name in ['bus']:
                         attr = 'vehicle.stopped'
                     else:
-                        attr = OWCustomNuScenesDataset5CLSOBJRPN.DefaultAttribute[name]
+                        attr = OWCustomNuScenesDataset8CLSOBJRPN.DefaultAttribute[name]
 
                 nusc_anno = dict(
                     sample_token=sample_token,

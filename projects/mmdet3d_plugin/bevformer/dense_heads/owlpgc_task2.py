@@ -716,10 +716,9 @@ class OWLPGC_task2(DETRHead):
             owod_num = owod_targets.shape[0]
             original_labels_tensor = gt_labels_list[0].clone()
             original_labels_tensor_device = original_labels_tensor.device
-            ow_label = torch.full((owod_num,), cls_scores_list[0].shape[1] - 1).to(original_labels_tensor_device)
+            ow_label = torch.full((owod_num,), 5).to(original_labels_tensor_device)
             ow_label_new_tensor = torch.cat((original_labels_tensor, ow_label))
             ow_gt_labels_list = [ow_label_new_tensor]
-            
             original_bboxes_tensor = gt_bboxes_list[0].clone()
             original_bboxes_tensor_device = original_bboxes_tensor.device
             ow_bbox_new_tensor = torch.cat((original_bboxes_tensor, owod_targets.to(original_bboxes_tensor_device)), dim=0)
@@ -768,6 +767,13 @@ class OWLPGC_task2(DETRHead):
         cls_scores_list = [cls_scores[i] for i in range(num_imgs)]
         bbox_preds_list = [bbox_preds[i] for i in range(num_imgs)]
         
+        min_label_to_keep = 6
+        max_label_to_keep = 8
+        for i in range(len(gt_labels_list)):
+            # 使用布尔索引去除不在指定范围内的标签
+            gt_labels_list[i] = gt_labels_list[i][(gt_labels_list[i] >= min_label_to_keep) & (gt_labels_list[i] <= max_label_to_keep)]
+  
+        
         ow_gt_labels_list, ow_gt_bboxes_list , ow_weight =  self.get_owod_target(cls_scores_list,
                                     bev_heatmap_list, img_metas_list, gt_bboxes_list, gt_labels_list)
 
@@ -785,7 +791,7 @@ class OWLPGC_task2(DETRHead):
         #     pickle.dump(bbox_targets_list, f)
         
         ow_match_labels = labels_list[0][pos_inds_list[0]].clone()
-        ow_match_labels_idx = pos_inds_list[0][ow_match_labels == (self.num_classes-1)]
+        ow_match_labels_idx = pos_inds_list[0][ow_match_labels == 5]
 
         # class init - list to tensor
         labels = torch.cat(labels_list, 0) 
