@@ -14,12 +14,11 @@ voxel_size = [0.2, 0.2, 8]
 NUM_CLASS=3
 
 train_class_names = [
-    'car', 'construction_vehicle', 'barrier',
-    'bicycle', 'pedestrian', 'truck', 'trailer', 'bus', 'motorcycle', 'traffic_cone'
+    'unk_obj', 'car', 'bicycle', 'pedestrian', 'construction_vehicle', 'barrier', 'truck', 'trailer', 'bus', 'motorcycle', 'traffic_cone'
 ]
 
 eval_class_names = [
-    'car', 'bicycle', 'pedestrian', 'unk_obj'
+    'unk_obj', 'car', 'bicycle', 'pedestrian'
 ]
 
 img_norm_cfg = dict(
@@ -44,7 +43,7 @@ queue_length = 4 # each sequence contains `queue_length` frames.
 model = dict(
     type='BEVFormer',
     use_grid_mask=True,
-    video_test_mode=True,
+    video_test_mode=False,
     img_backbone=dict(
         type='ResNet',
         depth=101,
@@ -65,7 +64,7 @@ model = dict(
         num_outs=4,
         relu_before_extra_convs=True),
     pts_bbox_head=dict(
-        type='BEVFormerHead_3cls_UnkGT',
+        type='OWBEVFormerHead_UnkGT_task1',
         bev_h=bev_h_,
         bev_w=bev_w_,
         num_query=900,
