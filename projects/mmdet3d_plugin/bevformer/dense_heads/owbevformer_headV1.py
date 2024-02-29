@@ -648,73 +648,73 @@ class OWBEVFormerHeadV1(DETRHead):
         _, topk_inds = torch.topk(-means_bb, self.topk)
         topk_inds = topk_inds.to(owod_device)
         
-        #############################################
-        # for vis result : bev_embed
-        import seaborn as sns
-        import matplotlib.pyplot as plt
-        from matplotlib.patches import Rectangle
-        import sys
-        import os
+        # #############################################
+        # # for vis result : bev_embed
+        # import seaborn as sns
+        # import matplotlib.pyplot as plt
+        # from matplotlib.patches import Rectangle
+        # import sys
+        # import os
 
-        sample_idx = img_metas['sample_idx']
+        # sample_idx = img_metas['sample_idx']
         
-        visual_dir = f'visualization/owbevformer_headv1/middle/{sample_idx}/'
-        if not os.path.isdir(visual_dir):
-            os.makedirs(visual_dir)
+        # visual_dir = f'visualization/owbevformer_headv1/middle/{sample_idx}/'
+        # if not os.path.isdir(visual_dir):
+        #     os.makedirs(visual_dir)
             
-        # 生成 gt 数据
-        from nuscenes.nuscenes import NuScenes
-        nusc = NuScenes(version='v1.0-trainval', dataroot='data/nuscenes', verbose=True)
-        my_sample = nusc.get('sample', sample_idx)
+        # # 生成 gt 数据
+        # from nuscenes.nuscenes import NuScenes
+        # nusc = NuScenes(version='v1.0-trainval', dataroot='data/nuscenes', verbose=True)
+        # my_sample = nusc.get('sample', sample_idx)
         
-        sensor = ['CAM_FRONT', 'CAM_FRONT_RIGHT', 'CAM_BACK_RIGHT', 'CAM_BACK', 'CAM_BACK_LEFT', 'CAM_FRONT_LEFT', 'LIDAR_TOP']
-        # sensor = ['CAM_FRONT', 'LIDAR_TOP']
-        for ss in sensor:
-            cam_data = nusc.get('sample_data', my_sample['data'][ss])
-            file_name = f'{visual_dir}gt_{ss}.png' 
-            nusc.render_sample_data(cam_data['token'], out_path=file_name)
-            print(f"{file_name} Save successfully!")
+        # sensor = ['CAM_FRONT', 'CAM_FRONT_RIGHT', 'CAM_BACK_RIGHT', 'CAM_BACK', 'CAM_BACK_LEFT', 'CAM_FRONT_LEFT', 'LIDAR_TOP']
+        # # sensor = ['CAM_FRONT', 'LIDAR_TOP']
+        # for ss in sensor:
+        #     cam_data = nusc.get('sample_data', my_sample['data'][ss])
+        #     file_name = f'{visual_dir}gt_{ss}.png' 
+        #     nusc.render_sample_data(cam_data['token'], out_path=file_name)
+        #     print(f"{file_name} Save successfully!")
         
-        #生成 bev_feat 可视化
-        dense_heatmap_bev_queries_image = bev_feat # 1024x1024
-        dense_image_bev_queries = dense_heatmap_bev_queries_image.cpu().clone()  # clone the tensor
-        # dense_image_bev_queries = dense_image_bev_queries.squeeze(0)  # remove the fake batch dimension
+        # #生成 bev_feat 可视化
+        # dense_heatmap_bev_queries_image = bev_feat # 1024x1024
+        # dense_image_bev_queries = dense_heatmap_bev_queries_image.cpu().clone()  # clone the tensor
+        # # dense_image_bev_queries = dense_image_bev_queries.squeeze(0)  # remove the fake batch dimension
         
-        # query.shape = 假设900个 query box 均匀分布在 bev 空间中, 忽略 z 轴
-        unmatched_boxes_print = (unmatched_boxes*10).long().cpu().detach().numpy() # (900, 4)
-        gt_boxes_print = (gt_boxes_img*10).long().cpu().detach().numpy() # (gt_num, 4)
-        ow_boxes_print = (unmatched_boxes[topk_inds]*10).long().cpu().detach().numpy()  # (3, 4)
+        # # query.shape = 假设900个 query box 均匀分布在 bev 空间中, 忽略 z 轴
+        # unmatched_boxes_print = (unmatched_boxes*10).long().cpu().detach().numpy() # (900, 4)
+        # gt_boxes_print = (gt_boxes_img*10).long().cpu().detach().numpy() # (gt_num, 4)
+        # ow_boxes_print = (unmatched_boxes[topk_inds]*10).long().cpu().detach().numpy()  # (3, 4)
         
-        for i in range(2):
-            plt.figure()
-            fig_path = visual_dir + f'C_BEV_after_transformer_{i}.png'
-            ax = sns.heatmap(dense_image_bev_queries.detach().numpy())  # Added ax
+        # for i in range(2):
+        #     plt.figure()
+        #     fig_path = visual_dir + f'C_BEV_after_transformer_{i}.png'
+        #     ax = sns.heatmap(dense_image_bev_queries.detach().numpy())  # Added ax
 
-            # For each gt_box, draw a rectangle
-            if i == 0:
-                for box in gt_boxes_print:
-                    xmin, ymin, xmax, ymax = box
-                    rect = Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='g', facecolor='none')
-                    ax.add_patch(rect)
+        #     # For each gt_box, draw a rectangle
+        #     if i == 0:
+        #         for box in gt_boxes_print:
+        #             xmin, ymin, xmax, ymax = box
+        #             rect = Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='g', facecolor='none')
+        #             ax.add_patch(rect)
                     
-                for box in ow_boxes_print:
-                    xmin, ymin, xmax, ymax = box
-                    rect = Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='b', facecolor='none')
-                    ax.add_patch(rect)
-            else:
-                for box in unmatched_boxes_print:
-                    xmin, ymin, xmax, ymax = box
-                    rect = Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='b', facecolor='none')
-                    ax.add_patch(rect)
+        #         for box in ow_boxes_print:
+        #             xmin, ymin, xmax, ymax = box
+        #             rect = Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='b', facecolor='none')
+        #             ax.add_patch(rect)
+        #     else:
+        #         for box in unmatched_boxes_print:
+        #             xmin, ymin, xmax, ymax = box
+        #             rect = Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='b', facecolor='none')
+        #             ax.add_patch(rect)
                 
-            plt.gca().invert_yaxis()
-            plt.title(f'C_BEV_after_transformer_{i}')
-            hm = ax.get_figure()  # Modified this line as well
-            hm.savefig(fig_path, dpi=36*36)
-            plt.close()
-            print(f"{fig_path} Save successfully!")
+        #     plt.gca().invert_yaxis()
+        #     plt.title(f'C_BEV_after_transformer_{i}')
+        #     hm = ax.get_figure()  # Modified this line as well
+        #     hm.savefig(fig_path, dpi=36*36)
+        #     plt.close()
+        #     print(f"{fig_path} Save successfully!")
         
-        pdb.set_trace()
+        # pdb.set_trace()
         #############################################
         
         return topk_inds
@@ -762,17 +762,16 @@ class OWBEVFormerHeadV1(DETRHead):
                                                         gt_bboxes_ignore_list,
                                                         )
         
-        for i in range(num_imgs):
-            labels_list[i][owod_targets[i]] = 5
+        labels_list[0][owod_targets] = 3
         
         # class init - list to tensor
         labels = torch.cat(labels_list, 0) 
         label_weights = torch.cat(label_weights_list, 0)
         bbox_targets = torch.cat(bbox_targets_list, 0)
         bbox_weights = torch.cat(bbox_weights_list, 0)
-        
+
         # owod labels - cls init
-        owod_num = sum(target.shape[0] for target in owod_targets)
+        owod_num = 10
 
         # owod setting
         owod_pos = num_total_pos + owod_num
