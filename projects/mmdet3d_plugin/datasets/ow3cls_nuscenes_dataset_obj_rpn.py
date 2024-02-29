@@ -18,7 +18,7 @@ import random
 from datetime import date
 
 @DATASETS.register_module()
-class OWCustomNuScenesDataset8CLSOBJRPN(NuScenesDataset):
+class OWCustomNuScenesDataset3CLSOBJRPN(NuScenesDataset):
     r"""NuScenes Dataset.
         This datset only add camera intrinsics and extrinsics to the results.
         """
@@ -42,21 +42,17 @@ class OWCustomNuScenesDataset8CLSOBJRPN(NuScenesDataset):
         'car': 'vehicle.parked',
         'pedestrian': 'pedestrian.moving',
         # 'trailer': 'vehicle.parked',
-        'truck': 'vehicle.parked',
-        'bus': 'vehicle.moving',
-        'motorcycle': 'cycle.without_rider',
-        'construction_vehicle': 'vehicle.parked',
+        # 'truck': 'vehicle.parked',
+        # 'bus': 'vehicle.moving',
+        # 'motorcycle': 'cycle.without_rider',
+        # 'construction_vehicle': 'vehicle.parked',
         'bicycle': 'cycle.without_rider',
-        'barrier': '',
+        # 'barrier': '',
         # 'traffic_cone': '',
         'unk_obj': '',
     }
-    TRAIN_CLASSES = (    'car', 'construction_vehicle', 'barrier',
-    'bicycle', 'pedestrian', 'unk_obj', 'truck', 'bus', 'motorcycle'
-                )
-    EVAL_CLASSES = (    'car', 'construction_vehicle', 'barrier',
-    'bicycle', 'pedestrian', 'unk_obj', 'truck', 'bus', 'motorcycle'
-                )
+    TRAIN_CLASSES = (    'car','bicycle', 'pedestrian' )
+    EVAL_CLASSES = (    'car', 'bicycle', 'pedestrian', 'unk_obj')
 
     def __init__(self, queue_length=4, bev_size=(200, 200), overlap_test=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -162,7 +158,7 @@ class OWCustomNuScenesDataset8CLSOBJRPN(NuScenesDataset):
             tmp = info['lidar_path']
             file_name_with_extension = tmp.split("/")[-1]  # 提取文件名和扩展名 data/nuscenes-mini/samples/LIDAR_TOP/n008-2018-08-01-15-16-36-0400__LIDAR_TOP__1533151603547590.pcd.bin
             file_name = file_name_with_extension.split(".")[0]  # 去掉扩展名
-            proposal_path = f'data/lidar_rpn/voxel_agno_5cls_train_obj_score/{file_name}.pkl'
+            proposal_path = f'data/lidar_rpn/voxel_agno_3cls_lidar_rpn_gas_train/{file_name}.pkl'
             
             for cam_type, cam_info in info['cams'].items():
                 image_paths.append(cam_info['data_path'])
@@ -342,14 +338,14 @@ class OWCustomNuScenesDataset8CLSOBJRPN(NuScenesDataset):
                     elif name in ['bicycle', 'motorcycle']:
                         attr = 'cycle.with_rider'
                     else:
-                        attr = OWCustomNuScenesDataset8CLSOBJRPN.DefaultAttribute[name]
+                        attr = OWCustomNuScenesDataset3CLSOBJRPN.DefaultAttribute[name]
                 else:
                     if name in ['pedestrian']:
                         attr = 'pedestrian.standing'
                     elif name in ['bus']:
                         attr = 'vehicle.stopped'
                     else:
-                        attr = OWCustomNuScenesDataset8CLSOBJRPN.DefaultAttribute[name]
+                        attr = OWCustomNuScenesDataset3CLSOBJRPN.DefaultAttribute[name]
 
                 nusc_anno = dict(
                     sample_token=sample_token,

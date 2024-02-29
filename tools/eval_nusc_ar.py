@@ -83,12 +83,12 @@ def custom_category_to_detection_name(category_name: str) -> Optional[str]:
     :return: nuScenes detection class.
     """
     detection_mapping = {
-        'movable_object.barrier': 'barrier',
+        # 'movable_object.barrier': 'barrier',
         'vehicle.bicycle': 'bicycle',
         # 'vehicle.bus.bendy': 'bus',
         # 'vehicle.bus.rigid': 'bus',
         'vehicle.car': 'car',
-        'vehicle.construction': 'construction_vehicle',
+        # 'vehicle.construction': 'construction_vehicle',
         # 'vehicle.motorcycle': 'motorcycle',
         'human.pedestrian.adult': 'pedestrian',
         'human.pedestrian.child': 'pedestrian',

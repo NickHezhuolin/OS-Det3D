@@ -24,6 +24,7 @@ from .owbevformer_headV1_rpn_wo_bbox_w_sw_wo_nc_w_single_down_threshold import O
 from .owbevformer_owdetr_task2_ft import OWBEVFormer_OWDETR_task2_ft
 
 # OWLPGC
+from .owlpgc_3cls import OWLPGC_3cls
 from .owlpgc_task1 import OWLPGC_task1
 from .owlpgc_task2 import OWLPGC_task2
 from .owlpgc_task3 import OWLPGC_task3
