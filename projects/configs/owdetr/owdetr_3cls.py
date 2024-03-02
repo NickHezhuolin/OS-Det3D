@@ -70,7 +70,7 @@ model = dict(
         num_outs=4,
         relu_before_extra_convs=True),
     pts_bbox_head=dict(
-        type='OWBEVFormerHeadV1RPNV1',
+        type='OWBEVFormerHeadV1',
         bev_h=bev_h_,
         bev_w=bev_w_,
         num_query=900,
@@ -178,7 +178,7 @@ model = dict(
             iou_cost=dict(type='IoUCost', weight=0.0), # Fake cost. This is just to make it compatible with DETR head.
             pc_range=point_cloud_range))))
 
-dataset_type = 'OWCustomNuScenesDataset5CLSRPN'
+dataset_type = 'OWCustomNuScenesDataset3CLS'
 data_root = 'data/nuscenes/'
 file_client_args = dict(backend='disk')
 
@@ -219,7 +219,7 @@ data = dict(
     train=dict(
         type=dataset_type,
         data_root=data_root,
-        ann_file=data_root + 'nuscenes_half_infos_temporal_train.pkl',
+        ann_file=data_root + 'nuscenes_infos_temporal_train.pkl',
         pipeline=train_pipeline,
         classes=train_class_names,
         modality=input_modality,
