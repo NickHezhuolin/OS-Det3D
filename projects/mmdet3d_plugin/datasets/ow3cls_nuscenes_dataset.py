@@ -571,7 +571,7 @@ class OWCustomNuScenesDataset3CLS_UnkGT(NuScenesDataset):
         'traffic_cone': '',
         'unk_obj': '',
     }
-    TRAIN_CLASSES = (  'car', 'construction_vehicle', 'barrier', 'bicycle', 'pedestrian', 'truck', 'trailer', 'bus', 'motorcycle', 'traffic_cone' )
+    TRAIN_CLASSES = (  'car', 'bicycle', 'pedestrian', 'construction_vehicle', 'barrier', 'truck', 'trailer', 'bus', 'motorcycle', 'traffic_cone' )
     EVAL_CLASSES = (    'car', 'bicycle', 'pedestrian', 'unk_obj')
 
     def __init__(self, queue_length=4, bev_size=(200, 200), overlap_test=False, *args, **kwargs):

@@ -367,7 +367,7 @@ class OWBEVFormerHead_UnkGT_task1(DETRHead):
         
         for i in range(len(gt_labels_list)):
             # 将大于已知标签的元素设置为0
-            gt_labels_list[i][gt_labels_list[i] > self.num_classes - 1] = 0
+            gt_labels_list[i][gt_labels_list[i] > self.num_classes - 1] = self.num_classes
         
         cls_reg_targets = self.get_targets(cls_scores_list, bbox_preds_list,
                                            gt_bboxes_list, gt_labels_list,

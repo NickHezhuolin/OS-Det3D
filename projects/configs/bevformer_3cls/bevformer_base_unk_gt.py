@@ -14,11 +14,11 @@ voxel_size = [0.2, 0.2, 8]
 NUM_CLASS=3
 
 train_class_names = [
-    'unk_obj', 'car', 'bicycle', 'pedestrian', 'construction_vehicle', 'barrier', 'truck', 'trailer', 'bus', 'motorcycle', 'traffic_cone'
+    'car', 'bicycle', 'pedestrian', 'construction_vehicle', 'barrier', 'truck', 'trailer', 'bus', 'motorcycle', 'traffic_cone'
 ]
 
 eval_class_names = [
-    'unk_obj', 'car', 'bicycle', 'pedestrian'
+    'car', 'bicycle', 'pedestrian', 'unk_obj'
 ]
 
 img_norm_cfg = dict(
@@ -64,7 +64,7 @@ model = dict(
         num_outs=4,
         relu_before_extra_convs=True),
     pts_bbox_head=dict(
-        type='OWBEVFormerHead_UnkGT_task1',
+        type='BEVFormerHead_3cls_UnkGT',
         bev_h=bev_h_,
         bev_w=bev_w_,
         num_query=900,
@@ -257,6 +257,6 @@ log_config = dict(
         dict(type='TensorboardLoggerHook')
     ])
 
-checkpoint_config = dict(interval=1)
+checkpoint_config = dict(interval=6)
 load_from = 'ckpts/bevformer_base_epoch_18_3_cls.pth'
 work_dir = 'work_dirs/bevformer_base_3cls_unk_gt'

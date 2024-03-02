@@ -648,7 +648,7 @@ class NuScenesEval(DetectionEval):
 if __name__ == "__main__":
 
 
-    result_path_ = 'test/owbevformer_base_5cls_wo_bb_without_nc_branch_w_sw_obj_rpn_down_threshold/Mon_Jan_29_05_27_13_2024/pts_bbox/results_nusc.json'
+    result_path_ = 'lpgc_3cls_val/work_dirs/owlpgc_3cls/Thu_Feb_29_13_08_43_2024/pts_bbox/results_nusc.json'
     eval_set_ = 'val'
     dataroot_ = 'data/nuscenes/'
     version_ = 'v1.0-trainval'
@@ -656,7 +656,7 @@ if __name__ == "__main__":
     plot_examples_ = 1
     render_curves_ = 0
     verbose_ = 1
-    output_dir_ = 'test/owbevformer_base_5cls_wo_bb_without_nc_branch_w_sw_obj_rpn_down_threshold/Mon_Jan_29_05_27_13_2024/pts_bbox/'
+    output_dir_ = 'lpgc_3cls_val/work_dirs/owlpgc_3cls/Thu_Feb_29_13_08_43_2024/pts_bbox/'
 
     if config_path == '':
         cfg_ = config_factory('detection_cvpr_2019')

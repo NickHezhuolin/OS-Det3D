@@ -349,11 +349,11 @@ class BEVFormerHead_3cls_UnkGT(DETRHead):
         num_imgs = cls_scores.size(0)
         cls_scores_list = [cls_scores[i] for i in range(num_imgs)]
         bbox_preds_list = [bbox_preds[i] for i in range(num_imgs)]
-        
+
         for i in range(len(gt_labels_list)):
             # 将大于已知标签的元素设置为0
-            gt_labels_list[i][gt_labels_list[i] > self.num_classes - 1] = self.num_classes
-            
+            gt_labels_list[i][gt_labels_list[i] >= self.num_classes - 1] = self.num_classes - 1
+
         cls_reg_targets = self.get_targets(cls_scores_list, bbox_preds_list,
                                            gt_bboxes_list, gt_labels_list,
                                            gt_bboxes_ignore_list)
