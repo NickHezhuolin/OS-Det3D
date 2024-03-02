@@ -43,13 +43,13 @@ queue_length = 4 # each sequence contains `queue_length` frames.
 model = dict(
     type='BEVFormer',
     use_grid_mask=True,
-    video_test_mode=True,
+    video_test_mode=False,
     img_backbone=dict(
         type='ResNet',
         depth=101,
         num_stages=4,
         out_indices=(1, 2, 3),
-        frozen_stages=1,
+        frozen_stages=2,
         norm_cfg=dict(type='BN2d', requires_grad=False),
         norm_eval=True,
         style='caffe',
@@ -258,5 +258,5 @@ log_config = dict(
     ])
 
 checkpoint_config = dict(interval=1)
-load_from = 'ckpts/r101_dcn_fcos3d_pretrain.pth'
+load_from = 'ckpts/bevformer_base_epoch_18_3_cls.pth'
 work_dir = 'work_dirs/bevformer_base_3cls_0213'
