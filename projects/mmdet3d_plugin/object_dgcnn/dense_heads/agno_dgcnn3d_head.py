@@ -418,11 +418,8 @@ class AgnoDGCNN3DHead(DETRHead):
         enc_cls_scores = preds_dicts['enc_cls_scores']
         enc_bbox_preds = preds_dicts['enc_bbox_preds']
         
-        # 全部映射为 0
         for tensor in gt_labels_list:
-            # 将张量移动到CPU并转换为NumPy数组
             numpy_array = tensor.cpu().numpy()
-            # 使用if语句来检查是否存在大于或等于5的值
             assert not (numpy_array >= 3).any(), "Value greater than or equal to 5 found"
         gt_labels_list = [torch.zeros_like(ts) for ts in gt_labels_list]
 
