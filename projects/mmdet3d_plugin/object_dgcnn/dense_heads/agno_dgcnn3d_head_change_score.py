@@ -313,165 +313,28 @@ class AgnoDGCNN3DHeadV2(DETRHead):
         objectness_pos_inds = objectness_sampling_result.pos_inds # 1
         objectness_neg_inds = objectness_sampling_result.neg_inds # 0
         
-        # 对 gt 对应对象操作，对两次二分匹配的结果 设置 conf 为 1
-        # 对 非gt 对应对象操作，对两次二分匹配的结果 设置 conf 为 计算的 distance-base score
-        # 对 无lidar点 对应对象，对两次二分匹配的结果 设置 conf 为 0
-        
         if len(objectness_neg_inds) > 0:
-            # Centerness as tartet -- Default
             denormalize_pred_bbox = denormalize_bbox(objectness_sampling_result.pos_bboxes, self.pc_range)
-            if self.objectness_type == 'Centerness':
-                # 提取xyz坐标
-                pos_bboxes_xyz = denormalize_pred_bbox[:, :3]
-                pos_gt_bboxes_xyz = objectness_sampling_result.pos_gt_bboxes[:, :3]
-                # 计算欧几里得距离
-                distance = torch.norm(pos_bboxes_xyz - pos_gt_bboxes_xyz, dim=1)
-                # 计算匹配框中心点距离分数
-                match_bbox_score = torch.exp(-0.1 * distance) # 0.1 是超参，控制分数下降速度， 当 d=4 时，得分为 0.67
-                pos_objectness_targets = match_bbox_score
-            elif self.objectness_type == 'Scaleness':
-                # 提取xyz坐标
-                pos_bboxes_xyz = denormalize_pred_bbox[:, :3]
-                pos_gt_bboxes_xyz = sampling_result.pos_gt_bboxes[:, :3]
-                # 计算欧几里得距离
-                distance = torch.norm(pos_bboxes_xyz - pos_gt_bboxes_xyz, dim=1)
-                # 计算匹配框计算bboxL1分数
-                pos_bboxes_hwl = denormalize_pred_bbox[:,3:6]
-                pos_gt_bboxes_hwl = sampling_result.pos_gt_bboxes[:, 3:6]
-                pos_bboxes_hwl_scale_prod = pos_bboxes_hwl.prod(dim=1)
-                pos_gt_bboxes_hwl_scale_prod = pos_gt_bboxes_hwl.prod(dim=1)
-                # 计算体积比
-                match_bbox_score = torch.minimum(pos_bboxes_hwl_scale_prod, pos_gt_bboxes_hwl_scale_prod) / torch.maximum(pos_bboxes_hwl_scale_prod, pos_gt_bboxes_hwl_scale_prod)
-                match_bbox_score = match_bbox_score ** (1/3)
-                distance_mask = distance < 4
-                pos_objectness_targets = match_bbox_score * distance_mask
-            elif self.objectness_type == 'Centerness_Scaleness_01':
-                # 提取xyz坐标
-                pos_bboxes_xyz = denormalize_pred_bbox[:, :3]
-                pos_gt_bboxes_xyz = sampling_result.pos_gt_bboxes[:, :3]
-                # 计算欧几里得距离
-                distance = torch.norm(pos_bboxes_xyz - pos_gt_bboxes_xyz, dim=1)
-                # 计算匹配框计算bboxL1分数
-                pos_bboxes_hwl = denormalize_pred_bbox[:,3:6]
-                pos_gt_bboxes_hwl = sampling_result.pos_gt_bboxes[:, 3:6]
-                pos_bboxes_hwl_scale_prod = pos_bboxes_hwl.prod(dim=1)
-                pos_gt_bboxes_hwl_scale_prod = pos_gt_bboxes_hwl.prod(dim=1)
-                # 计算体积比
-                match_bbox_score = torch.minimum(pos_bboxes_hwl_scale_prod, pos_gt_bboxes_hwl_scale_prod) / torch.maximum(pos_bboxes_hwl_scale_prod, pos_gt_bboxes_hwl_scale_prod)
-                match_bbox_score = match_bbox_score ** (1/3)
-                distance_mask = torch.exp(-0.1 * distance) # 0.1 是超参，控制分数下降速度， 当 d=4 时，得分为 0.67
-                pos_objectness_targets = match_bbox_score * distance_mask
-            elif self.objectness_type == 'Centerness_Scaleness_05':
-                # 提取xyz坐标
-                pos_bboxes_xyz = denormalize_pred_bbox[:, :3]
-                pos_gt_bboxes_xyz = sampling_result.pos_gt_bboxes[:, :3]
-                # 计算欧几里得距离
-                distance = torch.norm(pos_bboxes_xyz - pos_gt_bboxes_xyz, dim=1)
-                # 计算匹配框计算bboxL1分数
-                pos_bboxes_hwl = denormalize_pred_bbox[:,3:6]
-                pos_gt_bboxes_hwl = sampling_result.pos_gt_bboxes[:, 3:6]
-                pos_bboxes_hwl_scale_prod = pos_bboxes_hwl.prod(dim=1)
-                pos_gt_bboxes_hwl_scale_prod = pos_gt_bboxes_hwl.prod(dim=1)
-                # 计算体积比
-                match_bbox_score = torch.minimum(pos_bboxes_hwl_scale_prod, pos_gt_bboxes_hwl_scale_prod) / torch.maximum(pos_bboxes_hwl_scale_prod, pos_gt_bboxes_hwl_scale_prod)
-                match_bbox_score = match_bbox_score ** (1/3)
-                distance_mask = torch.exp(-0.5 * distance) # 0.5 是超参，控制分数下降速度， 当 d=4 时，得分为 0.67
-                pos_objectness_targets = match_bbox_score * distance_mask
-            elif self.objectness_type == 'Centerness_Scaleness_005':
-                # 提取xyz坐标
-                pos_bboxes_xyz = denormalize_pred_bbox[:, :3]
-                pos_gt_bboxes_xyz = sampling_result.pos_gt_bboxes[:, :3]
-                # 计算欧几里得距离
-                distance = torch.norm(pos_bboxes_xyz - pos_gt_bboxes_xyz, dim=1)
-                # 计算匹配框计算bboxL1分数
-                pos_bboxes_hwl = denormalize_pred_bbox[:,3:6]
-                pos_gt_bboxes_hwl = sampling_result.pos_gt_bboxes[:, 3:6]
-                pos_bboxes_hwl_scale_prod = pos_bboxes_hwl.prod(dim=1)
-                pos_gt_bboxes_hwl_scale_prod = pos_gt_bboxes_hwl.prod(dim=1)
-                # 计算体积比
-                match_bbox_score = torch.minimum(pos_bboxes_hwl_scale_prod, pos_gt_bboxes_hwl_scale_prod) / torch.maximum(pos_bboxes_hwl_scale_prod, pos_gt_bboxes_hwl_scale_prod)
-                match_bbox_score = match_bbox_score ** (1/3)
-                distance_mask = torch.exp(-0.05 * distance) # 0.5 是超参，控制分数下降速度， 当 d=4 时，得分为 0.67
-                pos_objectness_targets = match_bbox_score * distance_mask
-            elif self.objectness_type == 'DIOU3D':
-                diou3d_scores = calculate_diou3d(denormalize_pred_bbox, sampling_result.pos_gt_bboxes)
-                pos_objectness_targets = diou3d_scores
-            elif self.objectness_type == 'RDIOU3D':
-                rdiou3d_scores = calculate_rdiou3d(denormalize_pred_bbox, sampling_result.pos_gt_bboxes)
-                pos_objectness_targets = rdiou3d_scores
-            elif self.objectness_type == 'center_IOU3D':
-                # 提取用于计算的 7 维数据：[x, y, z, h, w, l, ry]
-                pred_bboxes_7d = denormalize_pred_bbox[:, :7]
-                gt_bboxes_7d = sampling_result.pos_gt_bboxes[:, :7]
 
-                # 计算边界框的中心点距离
-                pred_centers, pred_dimensions = pred_bboxes_7d[:, :3], pred_bboxes_7d[:, 3:6]
-                gt_centers, gt_dimensions = gt_bboxes_7d[:, :3], gt_bboxes_7d[:, 3:6]
-                center_distance = torch.norm(pred_centers - gt_centers, dim=1)
+            pos_bboxes_xyz = denormalize_pred_bbox[:, :3]
+            pos_gt_bboxes_xyz = sampling_result.pos_gt_bboxes[:, :3]
+            distance = torch.norm(pos_bboxes_xyz - pos_gt_bboxes_xyz, dim=1)
 
-                # 计算 IOU3D
-                iou3d_matrix = bbox_overlaps_3d(pred_bboxes_7d, gt_bboxes_7d)
-                iou3d = torch.diag(iou3d_matrix)
-                distance_mask = torch.exp(-0.5 * center_distance) # 0.5 是超参，控制分数下降速度， 当 d=4 时，得分为 0.67
-                pos_objectness_targets = iou3d * distance_mask
-                pdb.set_trace()
-            elif self.objectness_type == 'Center_Vector_Minkowski_1':
-                # 提取 xyz 坐标
-                pos_bboxes_xyz = denormalize_pred_bbox[:, :3]
-                pos_gt_bboxes_xyz = sampling_result.pos_gt_bboxes[:, :3]
-                # 计算欧几里得距离
-                distance = torch.norm(pos_bboxes_xyz - pos_gt_bboxes_xyz, dim=1)
-                distance_mask = torch.exp(-0.1 * distance)
-                
-                pos_bboxes = denormalize_pred_bbox[:,3:7]
-                pos_gt_bboxes = sampling_result.pos_gt_bboxes[:, 3:7]
-                bbox_vectors  = create_bbox_vectors(pos_bboxes)
-                gt_bbox_vectors  = create_bbox_vectors(pos_gt_bboxes)
-                
-                # 假设 create_bbox_vectors 函数返回的是每个向量的元组
-                def stack_vectors(vectors_list):
-                    return torch.stack([torch.cat(vectors) for vectors in vectors_list])
+            pos_bboxes_lwh = denormalize_pred_bbox[:, 3:6]
+            pos_gt_bboxes_lwh = sampling_result.pos_gt_bboxes[:, 3:6]
 
-                # 将向量列表转换为张量
-                bbox_vectors_tensor = stack_vectors(bbox_vectors)
-                gt_bbox_vectors_tensor = stack_vectors(gt_bbox_vectors)
+            size_ratio = torch.prod(torch.minimum(pos_bboxes_lwh[:, :3], pos_gt_bboxes_lwh[:, :3]) / torch.maximum(pos_bboxes_lwh[:, :3], pos_gt_bboxes_lwh[:, :3]), dim=1)
+            pos_bboxes_raw = denormalize_pred_bbox[:, 7]
+            pos_bboxes_degrees = radians_to_degrees(pos_bboxes_raw)
+            pos_gt_bboxes_raw = sampling_result.pos_gt_bboxes[:, 7]
+            pos_gt_bboxes_degrees = radians_to_degrees(pos_gt_bboxes_raw)
+            orientation_ratio = torch.minimum(pos_bboxes_degrees, pos_gt_bboxes_degrees) / torch.maximum(pos_bboxes_degrees, pos_gt_bboxes_degrees) 
                 
-                match_bbox_score = torch.sqrt(torch.sum((bbox_vectors_tensor - gt_bbox_vectors_tensor) ** 2, dim=1))
-                match_bbox_score = torch.exp(-0.01 * match_bbox_score)
-                match_bbox_score = match_bbox_score.to(distance_mask.device)
-                pos_objectness_targets = match_bbox_score * distance_mask
-            elif self.objectness_type == 'Center_Vector_Minkowski_2':
-                pos_bboxes = denormalize_pred_bbox[:,:7]
-                pos_gt_bboxes = sampling_result.pos_gt_bboxes[:, :7]
-                match_bbox_score = torch.sum((pos_bboxes - pos_gt_bboxes) ** 2, dim=1)
-            elif self.objectness_type == 'Center_Vector_gas':
-                # 提取 xyz 坐标
-                pos_bboxes_xyz = denormalize_pred_bbox[:, :3]
-                pos_gt_bboxes_xyz = sampling_result.pos_gt_bboxes[:, :3]
-                # 计算欧几里得距离
-                distance = torch.norm(pos_bboxes_xyz - pos_gt_bboxes_xyz, dim=1)
-                # 提取 lwh 尺寸和朝向角 raw
-                pos_bboxes_lwh = denormalize_pred_bbox[:, 3:6]
-                pos_gt_bboxes_lwh = sampling_result.pos_gt_bboxes[:, 3:6]
-                # 计算 lwh 尺寸比
-                size_ratio = torch.prod(torch.minimum(pos_bboxes_lwh[:, :3], pos_gt_bboxes_lwh[:, :3]) / torch.maximum(pos_bboxes_lwh[:, :3], pos_gt_bboxes_lwh[:, :3]), dim=1)
-                # 朝向角归一化
-                pos_bboxes_raw = denormalize_pred_bbox[:, 7]
-                pos_bboxes_degrees = radians_to_degrees(pos_bboxes_raw)
-                pos_gt_bboxes_raw = sampling_result.pos_gt_bboxes[:, 7]
-                pos_gt_bboxes_degrees = radians_to_degrees(pos_gt_bboxes_raw)
-                orientation_ratio = torch.minimum(pos_bboxes_degrees, pos_gt_bboxes_degrees) / torch.maximum(pos_bboxes_degrees, pos_gt_bboxes_degrees) 
-                 
-                # 计算得分
-                score = size_ratio * orientation_ratio
-                distance_mask = torch.exp(-0.1 * distance)
-                match_bbox_score = score ** (1/4) + distance_mask
-                pos_objectness_targets = match_bbox_score
-            else:
-                raise ValueError(
-                    'objectness_type must be either "Centerness" (Default) or '
-                    '"BoxIoU".')
-        
+            # compute score
+            score = size_ratio * orientation_ratio
+            distance_mask = torch.exp(-0.1 * distance)
+            match_bbox_score = score ** (1/4) + distance_mask
+            pos_objectness_targets = match_bbox_score
             objectness_targets[objectness_pos_inds] = pos_objectness_targets
             objectness_weights[objectness_pos_inds] = 1.0   
 
@@ -665,11 +528,8 @@ class AgnoDGCNN3DHeadV2(DETRHead):
         enc_cls_scores = preds_dicts['enc_cls_scores']
         enc_bbox_preds = preds_dicts['enc_bbox_preds']
         
-        # 全部映射为 0
         for tensor in gt_labels_list:
-            # 将张量移动到CPU并转换为NumPy数组
             numpy_array = tensor.cpu().numpy()
-            # 使用if语句来检查是否存在大于或等于5的值
             assert not (numpy_array >= 10).any(), "Value greater than or equal to 10 found"
         gt_labels_list = [torch.zeros_like(ts) for ts in gt_labels_list]
 
@@ -743,124 +603,6 @@ class AgnoDGCNN3DHeadV2(DETRHead):
             labels = preds['labels']
             ret_list.append([bboxes, scores, labels])
         return ret_list
-    
-def calculate_diou3d(pred_bboxes, gt_bboxes):
-    # 提取用于计算的 7 维数据：[x, y, z, h, w, l, ry]
-    pred_bboxes_7d = pred_bboxes[:, :7]
-    gt_bboxes_7d = gt_bboxes[:, :7]
-
-    # 计算边界框的中心点距离
-    pred_centers, pred_dimensions = pred_bboxes[:, :3], pred_bboxes[:, 3:6]
-    gt_centers, gt_dimensions = gt_bboxes[:, :3], gt_bboxes[:, 3:6]
-    center_distance = torch.norm(pred_centers - gt_centers, dim=1)
-
-    # 计算 IOU3D
-    iou3d_matrix = bbox_overlaps_3d(pred_bboxes_7d, gt_bboxes_7d)
-    iou3d = torch.diag(iou3d_matrix)
-    # 计算对角线长度的最大值
-    c2 = calculate_diagonal(pred_bboxes_7d, gt_bboxes_7d).to(iou3d.device)
-    
-    # 计算 DIOU3D
-    diou3d = iou3d - (center_distance ** 2 / c2)
-
-    return diou3d
-
-def calculate_rdiou3d(bboxes1, bboxes2):
-    x1u, y1u, z1u = bboxes1[:,0], bboxes1[:,1], bboxes1[:,2]
-    l1, w1, h1 =  torch.exp(bboxes1[:,3]), torch.exp(bboxes1[:,4]), torch.exp(bboxes1[:,5])
-    t1 = torch.sin(bboxes1[:,6]) * torch.cos(bboxes2[:,6])
-    x2u, y2u, z2u = bboxes2[:,0], bboxes2[:,1], bboxes2[:,2]
-    l2, w2, h2 =  torch.exp(bboxes2[:,3]), torch.exp(bboxes2[:,4]), torch.exp(bboxes2[:,5])
-    t2 = torch.cos(bboxes1[:,6]) * torch.sin(bboxes2[:,6])
-
-    # we emperically scale the y/z to make their predictions more sensitive.
-    x1 = x1u
-    y1 = y1u * 2
-    z1 = z1u * 2
-    x2 = x2u
-    y2 = y2u * 2
-    z2 = z2u * 2
-
-    # clamp is necessray to aviod inf.
-    l1, w1, h1 = torch.clamp(l1, max=10), torch.clamp(w1, max=10), torch.clamp(h1, max=10)
-    j1, j2 = torch.ones_like(h2), torch.ones_like(h2)
-
-    volume_1 = l1 * w1 * h1 * j1
-    volume_2 = l2 * w2 * h2 * j2
-
-    inter_l = torch.max(x1 - l1 / 2, x2 - l2 / 2)
-    inter_r = torch.min(x1 + l1 / 2, x2 + l2 / 2)
-    inter_t = torch.max(y1 - w1 / 2, y2 - w2 / 2)
-    inter_b = torch.min(y1 + w1 / 2, y2 + w2 / 2)
-    inter_u = torch.max(z1 - h1 / 2, z2 - h2 / 2)
-    inter_d = torch.min(z1 + h1 / 2, z2 + h2 / 2)
-    inter_m = torch.max(t1 - j1 / 2, t2 - j2 / 2)
-    inter_n = torch.min(t1 + j1 / 2, t2 + j2 / 2)
-
-    inter_volume = torch.clamp((inter_r - inter_l),min=0) * torch.clamp((inter_b - inter_t),min=0) \
-        * torch.clamp((inter_d - inter_u),min=0) * torch.clamp((inter_n - inter_m),min=0)
-    
-    c_l = torch.min(x1 - l1 / 2,x2 - l2 / 2)
-    c_r = torch.max(x1 + l1 / 2,x2 + l2 / 2)
-    c_t = torch.min(y1 - w1 / 2,y2 - w2 / 2)
-    c_b = torch.max(y1 + w1 / 2,y2 + w2 / 2)
-    c_u = torch.min(z1 - h1 / 2,z2 - h2 / 2)
-    c_d = torch.max(z1 + h1 / 2,z2 + h2 / 2)
-    c_m = torch.min(t1 - j1 / 2,t2 - j2 / 2)
-    c_n = torch.max(t1 + j1 / 2,t2 + j2 / 2)
-
-    inter_diag = (x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2 + (t2 - t1)**2
-    c_diag = torch.clamp((c_r - c_l),min=0)**2 + torch.clamp((c_b - c_t),min=0)**2 + torch.clamp((c_d - c_u),min=0)**2  + torch.clamp((c_n - c_m),min=0)**2
-
-    union = volume_1 + volume_2 - inter_volume
-    u = (inter_diag) / c_diag
-    rdiou = inter_volume / union
-    rdiou_score = rdiou - u
-    return rdiou_score
-
-def rotation_matrix(angle):
-    """ 创建绕 Z 轴的旋转矩阵 """
-    cos_val = torch.cos(angle)
-    sin_val = torch.sin(angle)
-    return torch.stack([cos_val, -sin_val, torch.zeros_like(cos_val),
-                        sin_val, cos_val, torch.zeros_like(cos_val),
-                        torch.zeros_like(cos_val), torch.zeros_like(cos_val), torch.ones_like(cos_val)], dim=1).view(-1, 3, 3)
-
-def calculate_corners_3d(bbox):
-    x, y, z, l, w, h, r = bbox[:, 0], bbox[:, 1], bbox[:, 2], bbox[:, 3], bbox[:, 4], bbox[:, 5], bbox[:, 6]
-    corners = []
-    for dx in [-0.5, 0.5]:
-        for dy in [-0.5, 0.5]:
-            for dz in [-0.5, 0.5]:
-                corner = torch.stack([dx * l, dy * w, dz * h], dim=1)
-                # 应用旋转
-                rot_mat = rotation_matrix(r)
-                rotated_corner = torch.bmm(rot_mat, corner.unsqueeze(-1)).squeeze(-1)
-                corners.append(rotated_corner + torch.stack([x, y, z], dim=1))
-    return torch.stack(corners, dim=1)  # shape [n, 8, 3]
-
-def calculate_diagonal(pred_bboxes, gt_bboxes):
-    # 计算预测框和真实框的所有角点
-    pred_corners = calculate_corners_3d(pred_bboxes)  # shape [n, 8, 3]
-    gt_corners = calculate_corners_3d(gt_bboxes)  # shape [n, 8, 3]
-
-    # 计算角点间的距离
-    max_diagonals = []
-    for i in range(pred_corners.size(0)):
-        distances = torch.norm(pred_corners[i].unsqueeze(0) - gt_corners[i].unsqueeze(1), dim=2)
-        max_distance = torch.max(distances)
-        max_diagonals.append(max_distance)
-
-    return torch.tensor(max_diagonals).pow(2)
-
-def calculate_size_similarity(pred_dimensions,gt_dimensions):
-    ratio_width = torch.atan(gt_dimensions[:,0]/gt_dimensions[:,1]) - torch.atan(pred_dimensions[:,0]/pred_dimensions[:,1])
-    ratio_height = torch.atan(gt_dimensions[:,1]/gt_dimensions[:,2]) - torch.atan(pred_dimensions[:,1]/pred_dimensions[:,2])
-    ratio_depth = torch.atan(gt_dimensions[:,2]/gt_dimensions[:,0]) - torch.atan(pred_dimensions[:,2]/pred_dimensions[:,0])
-    
-    # 定义v为这些比例差异的平方和
-    v = (4 / math.pi**2) * (ratio_width**2 + ratio_height**2 + ratio_depth**2)
-    return v
 
 def radians_to_degrees(radians):
     """
@@ -870,25 +612,3 @@ def radians_to_degrees(radians):
     degrees = degrees % 360  # Ensure the angle is within 0 to 360 degrees
     degrees = degrees / 360 + 1e-12
     return degrees
-
-def create_bbox_vectors(bbox_data):
-    bbox_vectors = []
-
-    for bbox in bbox_data:
-        l, w, h, r = bbox
-        length_vector = torch.tensor([l, 0, 0])
-        width_vector = torch.tensor([0, w, 0])
-        height_vector = torch.tensor([0, 0, h])
-
-        rotation_matrix = torch.tensor([
-            [torch.cos(r), -torch.sin(r), 0],
-            [torch.sin(r), torch.cos(r), 0],
-            [0, 0, 1]
-        ])
-
-        rotated_length_vector = torch.matmul(rotation_matrix, length_vector)
-        rotated_width_vector = torch.matmul(rotation_matrix, width_vector)
-
-        bbox_vectors.append((rotated_length_vector, rotated_width_vector, height_vector))
-
-    return bbox_vectors

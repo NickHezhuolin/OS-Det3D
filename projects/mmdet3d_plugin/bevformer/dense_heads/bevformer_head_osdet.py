@@ -17,8 +17,10 @@ import pdb
 import time
 from nuscenes.nuscenes import NuScenes
 
+import os
+
 @HEADS.register_module()
-class BEVFormerHead_RPN(DETRHead):
+class BEVFormerHead_OSDET(DETRHead):
     """Head of Detr3D.
     Args:
         with_box_refine (bool): Whether to refine the reference points
@@ -43,12 +45,6 @@ class BEVFormerHead_RPN(DETRHead):
                  topk=3, # owod parm
                  owod=False, # owod parm
                  owod_decoder_layer=6, # owod parm
-                 loss_nc_cls=dict(
-                                 type='FocalLoss',
-                                 use_sigmoid=True,
-                                 gamma=2.0,
-                                 alpha=0.25,
-                                 loss_weight=2.0),
                  **kwargs):
 
         self.bev_h = bev_h
@@ -77,7 +73,7 @@ class BEVFormerHead_RPN(DETRHead):
         self.real_w = self.pc_range[3] - self.pc_range[0]
         self.real_h = self.pc_range[4] - self.pc_range[1]
         self.num_cls_fcs = num_cls_fcs - 1
-        super(BEVFormerHead_RPN, self).__init__(
+        super(BEVFormerHead_OSDET, self).__init__(
             *args, transformer=transformer, **kwargs)
         self.code_weights = nn.Parameter(torch.tensor(
             self.code_weights, requires_grad=False), requires_grad=False)
@@ -116,7 +112,6 @@ class BEVFormerHead_RPN(DETRHead):
             self.reg_branches = nn.ModuleList(
                 [reg_branch for _ in range(num_pred)])
 
-        # OWOD目前不适用two-stage
         if not self.as_two_stage:
             self.bev_embedding = nn.Embedding(
                 self.bev_h * self.bev_w, self.embed_dims)
@@ -184,7 +179,7 @@ class BEVFormerHead_RPN(DETRHead):
                 img_metas=img_metas,
                 prev_bev=prev_bev
         )
-
+    
         bev_embed, hs, init_reference, inter_references = outputs
         
         hs = hs.permute(0, 2, 1, 3)
@@ -221,64 +216,6 @@ class BEVFormerHead_RPN(DETRHead):
         outputs_classes = torch.stack(outputs_classes)
         outputs_coords = torch.stack(outputs_coords)
         
-        #############################################
-        # # for vis result : bev_embed
-        # import numpy
-        # import seaborn as sns
-        # import matplotlib.pyplot as plt
-        # import sys
-        # import os
-        
-        # sample_idx = img_metas[0]['sample_idx']
-        
-        # visual_dir = f'visualization/nuscenes/bevformer_base_val/bev_encoder_add_bbox/'
-        # source_dir = f'visualization/nuscenes/bevformer_base_val/source_lidar_gt/'
-        # if not os.path.isdir(visual_dir):
-        #     os.makedirs(visual_dir)
-        # if not os.path.isdir(source_dir):
-        #     os.makedirs(source_dir)
-            
-        # # 生成 gt 数据
-        # from nuscenes.nuscenes import NuScenes
-        # nusc = NuScenes(version='v1.0-trainval', dataroot='data/nuscenes', verbose=True)
-        # my_sample = nusc.get('sample', sample_idx)
-        # print(nusc.list_sample(my_sample['token']))
-        # print('**************************************************************')
-        # print(my_sample['data'])
-        
-        # # sensor = ['CAM_FRONT', 'CAM_FRONT_RIGHT', 'CAM_BACK_RIGHT', 'CAM_BACK', 'CAM_BACK_LEFT', 'CAM_FRONT_LEFT', 'LIDAR_TOP']
-        # sensor = ['CAM_FRONT', 'LIDAR_TOP']
-        # for ss in sensor:
-        #     cam_data = nusc.get('sample_data', my_sample['data'][ss])
-        #     file_name = f'{source_dir}gt_{sample_idx}_{ss}.png' 
-        #     nusc.render_sample_data(cam_data['token'], out_path=file_name)
-        #     print(f"{file_name} Save successfully!")
-        
-        # #生成 bev_feat 可视化
-        # dense_heatmap_bev_queries_image = torch.mean(bev_embed.detach().permute(1, 2, 0).view(1, 256, 200, 200), dim=1)
-        # dense_image_bev_queries = dense_heatmap_bev_queries_image.cpu().clone()  # clone the tensor
-        # dense_image_bev_queries = dense_image_bev_queries.squeeze(0)  # remove the fake batch dimension
-        
-        # # query.shape = 假设900个 query box 均匀分布在 bev 空间中, 忽略 z 轴
-        # # mapping outputs_classes(all_bbox_preds).xyz to bev_embed : green
-        # # mapping outputs_coords(gt_bboxes_list).xyz to bev_embed : blue
-        
-        # plt.figure()
-        # fig_path = visual_dir + f'C_BEV_after_transformer_{sample_idx}.png'
-        # fig = sns.heatmap(dense_image_bev_queries.detach().numpy())
-        # plt.gca().invert_yaxis()
-        # plt.title('C_BEV_after_transformer')
-        # hm = fig.get_figure()
-        # hm.savefig(fig_path, dpi=36*36)
-        # plt.close()
-        # print(f"{fig_path} Save successfully!")
-        # pred_bbox = outputs_coords.detach().cpu().numpy()
-        
-        # for idx,t in enumerate(pred_bbox):
-        #     array = t.squeeze(0)
-        #     numpy.savetxt(f'./pred_bbox_{idx}.txt', array, fmt="%.6f")
-        # pdb.set_trace()
-        #############################################
         if self.owod:
               outs = {
                 'bev_embed': bev_embed,
@@ -517,16 +454,11 @@ class BEVFormerHead_RPN(DETRHead):
         # read from proposal_file
         proposal_file_name = img_metas_list[0]['proposal']
         with open(proposal_file_name, 'rb') as f:
-            try:
                 proposal = pickle.load(f)
-            except EOFError:
-                print(proposal_file_name)
-                return gt_labels_list, gt_bboxes_list
         
         # Lidar RPN proposal
         all_proposal_bbox = torch.stack(proposal, dim=0).to(owod_device)
         
-        # 使用这些索引来获取前50个proposal_bbox
         values = all_proposal_bbox[:, -1]
         sorted_indices = values.argsort(descending=True)
         rpn_select_num = gt_bboxes_list[0].shape[0] + 30
@@ -537,17 +469,12 @@ class BEVFormerHead_RPN(DETRHead):
         querie_box = queries.clone().to(owod_device)
         unmatched_indices = querie_box
         
-        # gt_bbox.shape = [900,9] , xyz, lwh, raw, vx, vy
-        # boxes.shape=10 , 取boxes[:,:8] , xyz, lwh, sinθ, cosθ, vx, vy
         gt_boxes = gt_bboxes_list[0].clone()
         boxes = proposal_bbox
 
-        # 将3D框中心点转换为角点,box_3d_points_tensor.shape=[900,8,3]
-        # box_3d_points = get_corners_gt(boxes)
         box_3d_points = get_corners_gt(boxes)
         gt_box_3d_points = get_corners_gt(gt_boxes)
 
-        # 计算2D边界框,只取图像xy坐标
         x_min, _ = torch.min(box_3d_points[..., 0], dim=1)
         y_min, _ = torch.min(box_3d_points[..., 1], dim=1)
         x_max, _ = torch.max(box_3d_points[..., 0], dim=1)
@@ -557,7 +484,6 @@ class BEVFormerHead_RPN(DETRHead):
         gt_x_max, _ = torch.max(gt_box_3d_points[..., 0], dim=1)
         gt_y_max, _ = torch.max(gt_box_3d_points[..., 1], dim=1)
 
-        # 构造 BEV 2d bbox 结构
         unmatched_boxes = torch.stack([x_min, y_min, x_max, y_max], dim=1)
         gt_boxes_img = torch.stack([gt_x_min, gt_y_min, gt_x_max, gt_y_max], dim=1)
       
@@ -567,9 +493,8 @@ class BEVFormerHead_RPN(DETRHead):
         
         bb = unmatched_boxes.clone()
         
-        # 根据未匹配idx，选择未匹配2d框
+
         def bbox_iou_vectorized(bboxes1, bboxes2):
-            # 扩展维度以便于广播
             bboxes1 = bboxes1[:, None, :]
             bboxes2 = bboxes2[None, :, :]
             
@@ -592,116 +517,34 @@ class BEVFormerHead_RPN(DETRHead):
             keep_indices = torch.nonzero(max_ious < 0.01).squeeze()
             
             unmatched_indices = unmatched_indices[keep_indices]
-
-        # 对 xy 同时做同倍增加，匹配扩增后的 bev
+        
         xmin = (bb[unmatched_indices, 0] * 10).long()
         ymin = (bb[unmatched_indices, 1] * 10).long()
         xmax = (bb[unmatched_indices, 2] * 10).long()
         ymax = (bb[unmatched_indices, 3] * 10).long()
         
-        if xmin.shape[0] > self.topk:
-            # 上采样bev_feature shape(200 x 200) 转换 到bev下
+        if  xmin.dim() != 0 and xmin.shape[0] > self.topk:
             upsaple = nn.Upsample(size=(int(self.real_h*10),int(self.real_w*10)), mode='bilinear', align_corners=True) # 转到真实lidar尺寸 ( self.real_h*10 = 1024 x self.real_w*10 = 1024 )
             bev_feat_up = upsaple(backbone_feature.unsqueeze(0)) # 1x1x1024x1024
             bev_feat = bev_feat_up.squeeze(0).squeeze(0) # 1024x1024
             
-            # 确保xy，最大最小值在bev_feat的范围内
             scaled_boxes = (bb[unmatched_indices] * 10).long()
             xmin, ymin, xmax, ymax = scaled_boxes.t()
 
-            # 切分img_feat
             bev_feat_slices = [bev_feat[ymin[i]:ymax[i], xmin[i]:xmax[i]] for i in range(len(xmin))]
 
-            # 计算att均值得分
             means_bb_slices = torch.tensor([torch.mean(slice) for slice in bev_feat_slices], device=unmatched_boxes.device)        
             
             mask = torch.isnan(means_bb_slices)
             means_bb_slices[mask] = 10e10
 
-            _, topk_inds = torch.topk(-means_bb_slices, self.topk)
+            _, topk_inds = torch.topk(means_bb_slices, self.topk)
             topk_inds = unmatched_indices[topk_inds]
             topk_inds = topk_inds.to(owod_device)
             
-            #############################################
-            # # for vis result : bev_embed
-            # import seaborn as sns
-            # import matplotlib.pyplot as plt
-            # from matplotlib.patches import Rectangle
-            # import sys
-            # import os
-
-            # sample_idx = img_metas_list[0]['sample_idx']
-            
-            # visual_dir = f'visualization/{sample_idx}/'
-            # if not os.path.isdir(visual_dir):
-            #     os.makedirs(visual_dir)
-                
-            # # 生成 gt 数据
-            # from nuscenes.nuscenes import NuScenes
-            # nusc = NuScenes(version='v1.0-trainval', dataroot='data/nuscenes', verbose=True)
-            # my_sample = nusc.get('sample', sample_idx)
-            
-            # # sensor = ['CAM_FRONT', 'CAM_FRONT_RIGHT', 'CAM_BACK_RIGHT', 'CAM_BACK', 'CAM_BACK_LEFT', 'CAM_FRONT_LEFT', 'LIDAR_TOP']
-            # sensor = ['CAM_FRONT', 'LIDAR_TOP']
-            # for ss in sensor:
-            #     cam_data = nusc.get('sample_data', my_sample['data'][ss])
-            #     file_name = f'{visual_dir}gt_{ss}.png' 
-            #     nusc.render_sample_data(cam_data['token'], out_path=file_name)
-            #     print(f"{file_name} Save successfully!")
-            
-            # #生成 bev_feat 可视化
-            # dense_heatmap_bev_queries_image = bev_feat # 1024x1024
-            # dense_image_bev_queries = dense_heatmap_bev_queries_image.cpu().clone()  # clone the tensor
-            # dense_image_bev_queries = dense_image_bev_queries.squeeze(0)  # remove the fake batch dimension
-            
-            # # query.shape = 假设900个 query box 均匀分布在 bev 空间中, 忽略 z 轴
-            # unmatched_boxes_print = (unmatched_boxes*10).long().cpu().detach().numpy() # (900, 4)
-            # gt_boxes_print = (gt_boxes_img*10).long().cpu().detach().numpy() # (gt_num, 4)
-            # ow_boxes_print = (unmatched_boxes[topk_inds]*10).long().cpu().detach().numpy()  # (3, 4)
-            # rpn_boxes_print = (unmatched_boxes[unmatched_indices]*10).long().cpu().detach().numpy()
-            
-            # for i in range(4): 
-            #     plt.figure()
-            #     fig_path = visual_dir + f'C_BEV_after_transformer_{i}.png'
-            #     ax = sns.heatmap(dense_image_bev_queries.detach().numpy())  # Added ax
-
-            #     if i == 0:
-            #     # For each gt_box, draw a rectangle
-            #         for box in gt_boxes_print:
-            #             xmin, ymin, xmax, ymax = box
-            #             rect = Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='b', facecolor='none')
-            #             ax.add_patch(rect)
-            #     elif i == 1:
-            #     # For each ow_topk, draw a rectangle
-            #         for box in ow_boxes_print:
-            #             xmin, ymin, xmax, ymax = box
-            #             rect = Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='b', facecolor='none')
-            #             ax.add_patch(rect)
-            #     elif i == 2:
-            #     # For each rpn_after_iou, draw a rectangle
-            #         for box in rpn_boxes_print:
-            #             xmin, ymin, xmax, ymax = box
-            #             rect = Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='b', facecolor='none')
-            #             ax.add_patch(rect)
-            #     else:
-            #     # For each rpn_select, draw a rectangle
-            #         for box in unmatched_boxes_print:
-            #             xmin, ymin, xmax, ymax = box
-            #             rect = Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='b', facecolor='none')
-            #             ax.add_patch(rect)
-                
-            #     plt.gca().invert_yaxis()
-            #     plt.title('C_BEV_after_transformer')
-            #     hm = ax.get_figure()  # Modified this line as well
-            #     hm.savefig(fig_path, dpi=36*36)
-            #     plt.close()
-            #     print(f"{fig_path} Save successfully!")
-            
-            # pdb.set_trace()
-            #############################################
-            
             # gt_label_list + owod_targets
-            owod_targets = proposal_bbox[topk_inds] 
+            owod_targets = proposal_bbox[topk_inds]
+
             owod_num = owod_targets.shape[0]
             original_labels_tensor = gt_labels_list[0].clone()
             original_labels_tensor_device = original_labels_tensor.device
@@ -713,10 +556,12 @@ class BEVFormerHead_RPN(DETRHead):
             original_bboxes_tensor_device = original_bboxes_tensor.device
             ow_bbox_new_tensor = torch.cat((original_bboxes_tensor, owod_targets.to(original_bboxes_tensor_device)), dim=0)
             ow_gt_bboxes_list = [ow_bbox_new_tensor]
-        
-            return ow_gt_labels_list, ow_gt_bboxes_list
+            
+            ow_weight = all_proposal_bbox[topk_inds,9:].t()
+            
+            return ow_gt_labels_list, ow_gt_bboxes_list, ow_weight
         else:
-            return gt_labels_list, gt_bboxes_list
+            return gt_labels_list, gt_bboxes_list, 0
     
     def loss_single_owod(self,
                         cls_scores,
@@ -748,7 +593,7 @@ class BEVFormerHead_RPN(DETRHead):
         cls_scores_list = [cls_scores[i] for i in range(num_imgs)]
         bbox_preds_list = [bbox_preds[i] for i in range(num_imgs)]
         
-        ow_gt_labels_list, ow_gt_bboxes_list =  self.get_owod_target(cls_scores_list,
+        ow_gt_labels_list, ow_gt_bboxes_list , ow_weight =  self.get_owod_target(cls_scores_list,
                                     bev_heatmap_list, img_metas_list, gt_bboxes_list, gt_labels_list)
 
         cls_reg_targets = self.get_targets(cls_scores_list, bbox_preds_list,
@@ -756,17 +601,18 @@ class BEVFormerHead_RPN(DETRHead):
         
         (labels_list, label_weights_list, bbox_targets_list, bbox_weights_list, targets_indices,
          num_total_pos, num_total_neg, pos_inds_list) = cls_reg_targets
-        
+
         ow_match_labels = labels_list[0][pos_inds_list[0]].clone()
-        ow_match_labels_idx = pos_inds_list[0][ow_match_labels == (self.num_classes-1)]
-        
+        ow_match_labels_idx = pos_inds_list[0][ow_match_labels == self.num_classes - 1]
+
         # class init - list to tensor
         labels = torch.cat(labels_list, 0) 
         label_weights = torch.cat(label_weights_list, 0)
         bbox_targets = torch.cat(bbox_targets_list, 0)
         bbox_weights = torch.cat(bbox_weights_list, 0)
         
-        # without refine bbox
+        # with soft weight
+        label_weights[ow_match_labels_idx] = ow_weight
         bbox_weights[ow_match_labels_idx] = 0
 
         # classification loss
@@ -781,7 +627,7 @@ class BEVFormerHead_RPN(DETRHead):
 
         loss_cls = self.loss_cls(
             cls_scores, labels, label_weights, avg_factor=cls_avg_factor)
-        
+
         # Compute the average number of gt boxes accross all gpus, for
         bbox_pos_num = num_total_pos - self.topk
         
@@ -934,7 +780,6 @@ class BEVFormerHead_RPN(DETRHead):
     
 def get_corners_pred_bb(bbox):
 
-    # 分解边界框
     # center in the bev
     cx = bbox[..., 0:1]
     cy = bbox[..., 1:2]
@@ -953,7 +798,6 @@ def get_corners_pred_bb(bbox):
     sin, cos = bbox[:,6], bbox[:,7]
     rot = torch.atan2(sin, cos)
 
-    # 首先，将旋转的弧度转换为角度
     rot_degrees = rot * (180 / np.pi)
 
     for i in range(len(rot_degrees)):
@@ -964,23 +808,18 @@ def get_corners_pred_bb(bbox):
 
     rot = rot_degrees / (180 / np.pi)
 
-
-    # 创建一个3D边界框的8个角点在局部坐标系中的坐标
     local_corners = torch.stack([-l/2, -w/2, -h/2, l/2, -w/2, -h/2, l/2, w/2, -h/2, -l/2, w/2, -h/2,
                                  -l/2, -w/2, h/2, l/2, -w/2, h/2, l/2, w/2, h/2, -l/2, w/2, h/2], dim=-1)
 
     local_corners = local_corners.view(*l.shape[:-1], 8, 3)
-    local_corners = local_corners.permute(0, 2, 1)  # 重塑为[batch_size, 3, 8]
+    local_corners = local_corners.permute(0, 2, 1)  
 
-    # 构建旋转矩阵
     zeros, ones = torch.zeros_like(rot), torch.ones_like(rot)
     rotation_matrix = torch.stack([cos, -sin, zeros, sin, cos, zeros, zeros, zeros, ones], dim=-1)
     rotation_matrix = rotation_matrix.view(-1, 3, 3) 
 
-    # 旋转角点
     rotated_corners = torch.einsum('bij,bjk->bik', rotation_matrix, local_corners)
 
-    # 平移角点
     xyz = torch.cat([cx, cy, cz], dim=-1)
     global_corners = rotated_corners.permute(0, 2, 1) + xyz.unsqueeze(1)
 
@@ -988,7 +827,6 @@ def get_corners_pred_bb(bbox):
 
 def get_corners_gt(bbox):
 
-    # 分解边界框
     # center in the bev
     cx = bbox[..., 0:1]
     cy = bbox[..., 1:2]
@@ -1003,17 +841,14 @@ def get_corners_gt(bbox):
     rot = bbox[:,6:7]
     cos, sin = torch.cos(rot), torch.sin(rot)
 
-    # 创建一个3D边界框的8个角点在局部坐标系中的坐标
-
     lwh = torch.cat([l, w, h], dim=-1)
     x, y, z = lwh[:, 0] / 2, lwh[:, 1] / 2, lwh[:, 2] / 2
     local_corners = torch.stack([-x, -y, -z, x, -y, -z, x, y, -z, -x, y, -z,
                                   -x, -y, z, x, -y, z, x, y, z, -x, y, z], dim=-1)
 
     local_corners = local_corners.view(*lwh.shape[:-1], 8, 3)
-    local_corners = local_corners.permute(0, 2, 1)  # 重塑为[900, 3, 8]
+    local_corners = local_corners.permute(0, 2, 1)  
 
-    # 首先，将旋转的弧度转换为角度
     rot_degrees = rot * (180 / np.pi)
 
     for i in range(len(rot_degrees)):
@@ -1024,17 +859,14 @@ def get_corners_gt(bbox):
 
     rot = rot_degrees / (180 / np.pi)
 
-    # 构建旋转矩阵
     cos, sin = rot.cos(), rot.sin()
 
     zeros, ones = torch.zeros_like(rot), torch.ones_like(rot)
     rotation_matrix = torch.stack([cos, -sin, zeros, sin, cos, zeros, zeros, zeros, ones], dim=-1)
     rotation_matrix = rotation_matrix.view(*rot.shape[:-1], 3, 3)
 
-    # 旋转角点
     rotated_corners = torch.einsum('bij,bjk->bik', rotation_matrix, local_corners)
 
-    # 平移角点
     xyz = torch.cat([cx, cy, cz], dim=-1)
     global_corners = rotated_corners.permute(0, 2, 1) + xyz.unsqueeze(1)
 
