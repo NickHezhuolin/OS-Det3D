@@ -1,0 +1,5 @@
+from .dgcnn3d_head import DGCNN3DHead
+from .detr3d_head import Detr3DHead
+from .agno_dgcnn3d_head import AgnoDGCNN3DHead
+from .agno_dgcnn3d_head_change_score import AgnoDGCNN3DHeadV2
+from .agno_dgcnn3d_head_change_score_v2 import AgnoDGCNN3DHeadV3
