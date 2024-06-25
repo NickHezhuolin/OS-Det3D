@@ -11,14 +11,7 @@
 
 
 # Abstract
-Recognizing the unknown objects from an image is a significant challenge for safely deploying 3D detectors in the real world. 
-In previous works, camera 3D detectors are effective in identifying objects within certain categories.
-However, due to the lack of training on the features of unknown objects, these detectors fail to generate detection responses when encountering them.
-To mitigate the issue, we propose the LiDAR objectness-guided unknown discovery framework to generate pseudo-labels for unknown objects.
-Our key idea is selecting potential unknown objects from the 3D region proposals. 
-We make two improvements to our framework: First, a novel LiDAR Region Proposal Network (RPN) informed by geometric cues, designed to discover unknown objects more effectively. 
-Second, a cross-modal pseudo-labels selecting module leverages both the objectness scores from the LiDAR RPN and the feature attention responses from the camera detector to more accurately identify suitable unknown objects from 3D region proposals.
-Experiments on nuScenes and KITTI datasets demonstrate the effectiveness of our framework for camera 3D detectors to identify unknown objects even improving their detecting performance on known ones.
+Traditional camera 3D object detectors are typically trained to recognize a predefined set of known object classes. In real-world scenarios, these detectors may encounter unknown objects outside the training categories and fail to identify them correctly. To address this gap, we present OS-Det3D (Open-set Camera 3D Object Detection), a two-stage training framework enhancing the ability of camera 3D detectors to identify both known and unknown objects. The framework involves our proposed 3D Object Discovery Network (ODN3D), which is specifically trained using geometric cues such as the location and scale of 3D boxes to discover general 3D objects. ODN3D is trained in a class-agnostic manner, and the provided 3D object region proposals inherently come with data noise. To boost accuracy in identifying unknown objects, we introduce a Joint Objectness Selection (JOS) module. JOS selects the pseudo ground truth for unknown objects from the 3D object region proposals of ODN3D by combining the ODN3D objectness and camera feature attention objectness. Experiments on the nuScenes and KITTI datasets demonstrate the effectiveness of our framework in enabling camera 3D detectors to successfully identify unknown objects while also improving their performance on known objects.
 
 
 # Methods
