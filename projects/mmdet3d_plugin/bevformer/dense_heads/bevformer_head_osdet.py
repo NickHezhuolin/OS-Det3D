@@ -524,7 +524,7 @@ class BEVFormerHead_OSDET(DETRHead):
         ymax = (bb[unmatched_indices, 3] * 10).long()
         
         if  xmin.dim() != 0 and xmin.shape[0] > self.topk:
-            upsaple = nn.Upsample(size=(int(self.real_h*10),int(self.real_w*10)), mode='bilinear', align_corners=True) # 转到真实lidar尺寸 ( self.real_h*10 = 1024 x self.real_w*10 = 1024 )
+            upsaple = nn.Upsample(size=(int(self.real_h*10),int(self.real_w*10)), mode='bilinear', align_corners=True) 
             bev_feat_up = upsaple(backbone_feature.unsqueeze(0)) # 1x1x1024x1024
             bev_feat = bev_feat_up.squeeze(0).squeeze(0) # 1024x1024
             

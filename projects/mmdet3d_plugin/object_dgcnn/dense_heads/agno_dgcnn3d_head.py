@@ -13,8 +13,6 @@ from mmdet.models.dense_heads import DETRHead
 from mmdet3d.core.bbox.coders import build_bbox_coder
 from projects.mmdet3d_plugin.core.bbox.util import normalize_bbox
 
-import pdb
-
 @HEADS.register_module()
 class AgnoDGCNN3DHead(DETRHead):
     """Head of DeformDETR3D. 
