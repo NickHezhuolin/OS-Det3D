@@ -1,9 +1,9 @@
 <div align="center">   
   
-# Towards Camera Open-set 3D Object Detection
+# Toward Camera Open-Set 3D Object Detection for Autonomous Driving Scenarios
 </div>
 
-> **Towards Camera Open-set 3D Object Detection**
+> **Toward Camera Open-Set 3D Object Detection for Autonomous Driving Scenarios**
 
 
 # News
@@ -49,7 +49,16 @@ Traditional camera 3D object detectors are typically trained to recognize a pred
 If this work is helpful for your research, please consider citing the following BibTeX entry.
 
 ```
-
+@article{he2025toward,
+  title={Toward Camera Open-Set 3D Object Detection for Autonomous Driving Scenarios},
+  author={He, Zhuolin and Li, Xinrun and Tang, Jiacheng and Qiu, Shoumeng and Wang, Wenfu and Xue, Xiangyang and Pu, Jian},
+  journal={IEEE Transactions on Intelligent Transportation Systems},
+  volume={26},
+  number={12},
+  pages={23190--23201},
+  year={2025},
+  publisher={IEEE}
+}
 ```
 
 # Acknowledgement
